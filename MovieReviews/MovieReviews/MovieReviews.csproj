@@ -163,9 +163,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Default.html" />
-    <Content Include="favicon.ico" />
-    <Content Include="Images\bootstrap\glyphicons-halflings-white.png" />
-    <Content Include="Images\bootstrap\glyphicons-halflings.png" />
+    <Content Include="Images\favicon.ico" />
+    <Content Include="Images\logo.jpg" />
     <Content Include="Scripts\bootstrap\bootstrap.js" />
     <Content Include="Scripts\bootstrap\bootstrap.min.js" />
     <None Include="Scripts\jquery\jquery-1.8.1-vsdoc.js" />
@@ -177,6 +176,8 @@
     <Content Include="Styles\bootstrap\bootstrap-responsive.min.css" />
     <Content Include="Styles\bootstrap\bootstrap.css" />
     <Content Include="Styles\bootstrap\bootstrap.min.css" />
+    <Content Include="Styles\img\glyphicons-halflings-white.png" />
+    <Content Include="Styles\img\glyphicons-halflings.png" />
     <Content Include="Styles\jquery\jquery-ui.css" />
     <Content Include="Styles\jquery\jquery.ui.accordion.css" />
     <Content Include="Styles\jquery\jquery.ui.all.css" />
