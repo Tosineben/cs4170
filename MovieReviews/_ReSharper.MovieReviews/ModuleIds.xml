@@ -1,0 +1,4 @@
+<Modules>
+  <Module PersistentId="DDFEC058-5492-449F-B42A-456459493488" ModuleId="MovieReviews" />
+  <Module PersistentId="System.Web.Mvc, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" ModuleId="System.Web.Mvc" />
+</Modules>
