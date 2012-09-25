@@ -167,6 +167,7 @@
     <Content Include="Images\logo.jpg" />
     <Content Include="Scripts\bootstrap\bootstrap.js" />
     <Content Include="Scripts\bootstrap\bootstrap.min.js" />
+    <Content Include="Scripts\adq.module.js" />
     <None Include="Scripts\jquery\jquery-1.8.1-vsdoc.js" />
     <Content Include="Scripts\jquery\jquery-1.8.1.js" />
     <Content Include="Scripts\jquery\jquery-1.8.1.min.js" />
