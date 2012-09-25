@@ -1,4 +1,126 @@
 ﻿
+(function (module) {
+
+    module.search = {
+
+        init: function (settings) {
+            var self = this;
+            self.settings = settings;
+
+            $('#navSearchButton').click(function () {
+
+                self.onSearchSuccess(searchData);
+                return;
+
+                var query = $('#navSearchQuery').val().trim();
+
+                if (query == '') {
+                    // no search
+                    return;
+                }
+
+                var data = {
+                    offset: null,
+                    order: null,
+                    query: query,
+                    'critics-pick': null,
+                    'thousand-best': null,
+                    dvd: null,
+                    reviewer: null,
+                    'publication-date': null,
+                    'opening-date': null,
+                };
+
+                var url = self.settings.getSearchUrl();
+                var proxyUrl = "proxy.php?url=" + encodeURIComponent(url);
+
+                $.getJSON(proxyUrl, {
+                    data: data,
+                    success: self.onSearchSuccess,
+                    error: self.onSearchError,
+                });
+            });
+        },
+
+        onSearchSuccess: function (resp, fake) {
+            resp = searchData; //TEMP HACK
+
+            var self = this;
+
+            if (resp.status != "OK") {
+                alert(resp.status);
+                return;
+            }
+
+            self.displayPageNumbers(searchData.num_results);
+            self.displaySearchResults(searchData.results);
+        },
+                    
+        onSearchError: function (resp, fake) {
+            debugger;
+        },
+                    
+        displaySearchResults: function(results){
+            results = searchData.results; //TEMP HACK
+            debugger;
+
+            var self = this;
+
+            if (!results || results.length == 0) {
+                alert('No results!');
+                return;
+            }
+
+            var topResult = self.getMovieForDisplay(results[0], self.settings.getBioUrl);
+
+            //TODO: add links for related urls
+
+            var primary = $('#primaryMovie');
+            primary.children('h1').html(topResult.display_title);
+
+            var chunkSize = 4;
+            var chunks = [];
+            for (var i = 0, j = results.length; i < j; i += chunkSize) {
+                var movies = $.map(results.slice(i, i + chunkSize), function(movie) {
+                    return self.getMovieForDisplay(movie, self.settings.getBioUrl);
+                });
+                chunks.push({ movies: movies });
+            }
+
+            $.each(chunks, function(index, chunk) {
+                $('#movie-list').mustache('movie-row', chunk);
+            });
+        },
+        
+        getMovieForDisplay: function (movie, getBioUrl) {
+            return {
+                title: movie.display_title,
+                headline: movie.headline,
+                summary: movie.summary_short,
+                imgSrc: ((movie.multimedia || {}).resource || {}).src,
+                reviewerName: movie.byline,
+                reviewerBioUrl: getBioUrl(movie.byline),
+                reviewPubDate: moment(movie.publication_date),
+                openedInTheatresDate: moment(movie.opening_date),
+                dvdReleaseDate: moment(movie.dvd_release_date),
+                rating: movie.mpaa_rating,
+                isCriticsPick: movie.critics_pick == 1,
+                isThousandBest: movie.thousand_best == "1",
+                reviewSnippet: movie.capsule_review,
+                reviewUrl: movie.link.url
+            };
+        },
+
+        displayPageNumbers: function (numResults) {
+            numResults = searchData.num_results; //TEMP HACK
+
+        },
+    };
+
+})(adq.module('movieReviews'));
+
+
+
 //order - by-title, by-publication-date, by-opening-date, by-dvd-release-date
 //offset - multiple of 20, for paging
 
@@ -1162,9 +1284,9 @@ var searchData = {
             }
         }
     ]
-}
+};
 
-var bioData =  {
+var bioData = {
     "status": "OK",
     "copyright": "Copyright (c) 2012 The New York Times Company.  All Rights Reserved.",
     "num_results": 1,
@@ -1177,5 +1299,17 @@ var bioData =  {
             "seo_name": "Manohla-Dargis",
             "multimedia": null
         }
+    ]
+};
+
+var allPages = {
+    "pages": [
+          { offset: 0, numDisplay: '&larr; Prev', disabled: true },
+          { offset: 0, numDisplay: '1', active: true },
+          { offset: 20, numDisplay: '2' },
+          { offset: 40, numDisplay: '3' },
+          { offset: 60, numDisplay: '4' },
+          { offset: 80, numDisplay: '5' },
+          { offset: 20, numDisplay: 'Next &rarr;' }
     ]
 }
