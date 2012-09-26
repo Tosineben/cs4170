@@ -9,7 +9,7 @@
 
             $('#navSearchButton').click(function () {
 
-                self.onSearchSuccess(searchData);
+                self.onSearchSuccess(searchData, 0);
                 return;
 
                 var query = $('#navSearchQuery').val().trim();
@@ -40,9 +40,14 @@
                     error: self.onSearchError,
                 });
             });
+
+            $('.page-number').live('click', function(event) {
+                var newOffset = parseInt($(event.target).attr('data-offset'));
+                self.onSearchSuccess(searchData, newOffset);
+            });
         },
 
-        onSearchSuccess: function (resp, fake) {
+        onSearchSuccess: function (resp, offset) {
             resp = searchData; //TEMP HACK
 
             var self = this;
@@ -52,7 +57,7 @@
                 return;
             }
 
-            self.displayPageNumbers(searchData.num_results);
+            self.displayPageNumbers(searchData.num_results, offset);
             self.displaySearchResults(searchData.results);
         },
                     
@@ -62,7 +67,6 @@
                     
         displaySearchResults: function(results){
             results = searchData.results; //TEMP HACK
-            debugger;
 
             var self = this;
 
@@ -87,8 +91,12 @@
                 chunks.push({ movies: movies });
             }
 
+            var movieList = $('#movie-list');
+
+            movieList.html('');
+
             $.each(chunks, function(index, chunk) {
-                $('#movie-list').mustache('movie-row', chunk);
+                movieList.mustache('movie-row', chunk);
             });
         },
         
@@ -111,8 +119,40 @@
             };
         },
 
-        displayPageNumbers: function (numResults) {
+        displayPageNumbers: function (numResults, offset) {
             numResults = searchData.num_results; //TEMP HACK
+
+            var moviesPerPage = 20;
+
+            // make sure offset is a multiple of moviesPerPage
+            offset = moviesPerPage * Math.floor(offset / moviesPerPage);
+
+            var pageList = $('#pagination-list');
+
+            if (numResults <= moviesPerPage) {
+                // we only have one page of data, so hide pages and we're done
+                pageList.hide();
+                return;
+            }
+
+            pageList.show();
+
+            var numPages = Math.floor(numResults / moviesPerPage);
+            var activePage = offset / moviesPerPage;
+
+            var prevPage = { offset: offset - moviesPerPage, numDisplay: '&larr; Prev', disabled: activePage == 0 };
+            var nextPage = { offset: offset + moviesPerPage, numDisplay: 'Next &rarr;', disabled: activePage == numPages };
+
+            var pages = [ prevPage ];
+
+            for (var i = 0; i <= numPages; i++) {
+                var page = { offset: i * moviesPerPage, numDisplay: i + 1, active: i == activePage };
+                pages.push(page);
+            }
+
+            pages.push(nextPage);
+
+            $('#pagination-list').mustache('page-numbers', {pages:pages}, { method: 'html' });
 
         },
     };
@@ -1301,15 +1341,3 @@ var bioData = {
         }
     ]
 };
-
-var allPages = {
-    "pages": [
-          { offset: 0, numDisplay: '&larr; Prev', disabled: true },
-          { offset: 0, numDisplay: '1', active: true },
-          { offset: 20, numDisplay: '2' },
-          { offset: 40, numDisplay: '3' },
-          { offset: 60, numDisplay: '4' },
-          { offset: 80, numDisplay: '5' },
-          { offset: 20, numDisplay: 'Next &rarr;' }
-    ]
-}
