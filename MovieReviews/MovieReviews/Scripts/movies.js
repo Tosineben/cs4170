@@ -8,66 +8,63 @@
             self.settings = settings;
 
             $('#navSearchButton').click(function () {
+                $('#navSearchButton').button('loading');
 
-                self.onSearchSuccess(searchData, 0);
-                return;
-
-                var query = $('#navSearchQuery').val().trim();
+                var query = $('#navSearchQuery').val().trim().replace(/ /g, '+');
 
                 if (query == '') {
                     // no search
                     return;
                 }
 
-                var data = {
-                    offset: null,
-                    order: null,
-                    query: query,
-                    'critics-pick': null,
-                    'thousand-best': null,
-                    dvd: null,
-                    reviewer: null,
-                    'publication-date': null,
-                    'opening-date': null,
-                };
-
-                var url = self.settings.getSearchUrl();
-                var proxyUrl = "proxy.php?url=" + encodeURIComponent(url);
-
-                $.getJSON(proxyUrl, {
-                    data: data,
-                    success: self.onSearchSuccess,
-                    error: self.onSearchError,
-                });
+                // no offset for initial query
+                self.search = { query: query, offset: 0 };
+                self.doSearch(); 
             });
 
             $('.page-number').live('click', function(event) {
-                var newOffset = parseInt($(event.target).attr('data-offset'));
-                self.onSearchSuccess(searchData, newOffset);
+                self.search.offset = parseInt($(event.target).attr('data-offset'));
+                // keep all search data, use new offset
+                self.doSearch();
             });
         },
 
-        onSearchSuccess: function (resp, offset) {
-            resp = searchData; //TEMP HACK
-
+        doSearch: function(exactMatch) {
             var self = this;
 
-            if (resp.status != "OK") {
-                alert(resp.status);
-                return;
+            if (exactMatch) {
+                self.search.query = "'" + self.search.query + "'";
             }
 
-            self.displayPageNumbers(searchData.num_results, offset);
-            self.displaySearchResults(searchData.results);
-        },
-                    
-        onSearchError: function (resp, fake) {
-            debugger;
-        },
-                    
-        displaySearchResults: function(results){
-            results = searchData.results; //TEMP HACK
+            var url = self.settings.getSearchUrl(self.search.query, self.search.offset, self.search.criticsPick, self.search.thousandBest, 
+                                                 self.search.dvd, self.search.reviewer, self.search.pubDate, self.search.openDate);
+            
+            var proxyUrl = "proxy.php?url=" + encodeURIComponent(url);
 
+            $.getJSON(proxyUrl, function (rawResponse) {
+
+                var resp = jQuery.parseJSON(rawResponse);
+
+                // close any open alerts if user hasn't yet
+                $('.alert').alert('close');
+
+                // reset search button now that search is complete
+                $('#navSearchButton').button('reset');
+
+                if (!resp || resp.status != "OK") {
+                    var alertMsg = 'Looks like the New York Times Movie Reviews API might be down, please try again later.';
+                    $('#primaryContainer').mustache('alert', { message: alertMsg }, { method: 'prepend' });
+                    $('.alert').alert();
+                    return;
+                }
+
+                self.displayPageNumbers(resp.num_results, self.search.offset);
+                self.displaySearchResults(resp.results);
+                self.fixUpMovieHeights();
+            });
+        },
+
+        displaySearchResults: function(results){
             var self = this;
 
             if (!results || results.length == 0) {
@@ -77,10 +74,8 @@
 
             var topResult = self.getMovieForDisplay(results[0], self.settings.getBioUrl);
 
-            //TODO: add links for related urls
-
             var primary = $('#primaryMovie');
-            primary.children('h1').html(topResult.display_title);
+            primary.children('h1').html(topResult.title);
 
             var chunkSize = 4;
             var chunks = [];
@@ -100,8 +95,24 @@
             });
         },
         
+        fixUpMovieHeights: function () {
+
+            var maxHeight = 0;
+
+            $('#movie-list').children('.row-fluid').children('.span3').children('.well').each(function(index, movie) {
+                var height = $(movie).height();
+                if (height > maxHeight) {
+                    maxHeight = height;
+                }
+            });
+
+            $('#movie-list').children('.row-fluid').children('.span3').children('.well').each(function(index, movie) {
+                $(movie).height(maxHeight);
+            });
+        },
+        
         getMovieForDisplay: function (movie, getBioUrl) {
-            return {
+            var m = {
                 title: movie.display_title,
                 headline: movie.headline,
                 summary: movie.summary_short,
@@ -115,19 +126,24 @@
                 isCriticsPick: movie.critics_pick == 1,
                 isThousandBest: movie.thousand_best == "1",
                 reviewSnippet: movie.capsule_review,
-                reviewUrl: movie.link.url
+                reviewUrl: movie.link.url,
+                movieId: movie.nyt_movie_id
             };
+            
+            // if someone wants to read a long summary, they'll click more details
+            var summaryLength = 220 - m.title.length - m.headline.length;
+            if (m.summary.length > summaryLength) {
+                m.summary = (m.summary.substring(0, summaryLength) + ' ...');
+            }
+
+            return m;
         },
 
         displayPageNumbers: function (numResults, offset) {
-            numResults = searchData.num_results; //TEMP HACK
-
             var moviesPerPage = 20;
-
-            // make sure offset is a multiple of moviesPerPage
-            offset = moviesPerPage * Math.floor(offset / moviesPerPage);
-
+            debugger;
             var pageList = $('#pagination-list');
+            pageList.show();
 
             if (numResults <= moviesPerPage) {
                 // we only have one page of data, so hide pages and we're done
@@ -135,7 +151,8 @@
                 return;
             }
 
-            pageList.show();
+            // make sure offset is a multiple of moviesPerPage
+            offset = moviesPerPage * Math.floor(offset / moviesPerPage);
 
             var numPages = Math.floor(numResults / moviesPerPage);
             var activePage = offset / moviesPerPage;
@@ -152,34 +169,31 @@
 
             pages.push(nextPage);
 
-            $('#pagination-list').mustache('page-numbers', {pages:pages}, { method: 'html' });
-
+            pageList.mustache('page-numbers', {pages:pages}, { method: 'html' });
         },
+        
+        viewMovieDetail: function (movieId) {
+            var self = this;
+            var theMovie = _.filter(self.currentSearchData.results.filter, function(movie) {
+                return movie.nyt_movie_id == movieId;
+            })[0];
+            
+
+        }
     };
 
 })(adq.module('movieReviews'));
 
 
 
-//order - by-title, by-publication-date, by-opening-date, by-dvd-release-date
-//offset - multiple of 20, for paging
-
-//** SEARCH FOR MOVIE
-//'http://api.nytimes.com/svc/movies/v2/reviews/search?[optional-param1=value1]&[...]&api-key=' + myApiKey
-
 //** up to 3 of the following FILTERS - omit for all
 //query - keywords; matches titles and indexed terms =wild+west or ='wild+west' for exact match
-//** no query will search reviews: reviews/search?dvd=Y search for critic picks on dvd
 //critics-pick (Y/N) 
 //thousand-best (Y/N) - 1000 best movies ever
 //dvd (Y/N) - released on dvd yet
 //reviewer - 'manohla-dargis'
 //publication-date - of review, start and end date: YYYY-MM-DD;YYYY-MM-DD
 //opening-date - of movie in NY, single date: YYYY-MM-DD
-
-//** REVIEWER BIOS
-//'http://api.nytimes.com/svc/movies/v2/critics/{resource-type}?api-key=' + myApiKey
-//resource-type - all | full-time | part-time | reviewer | [reviewer-name]
 
 //The default order of search results is by closest match (a combination of recentness and keyword relevance). 
 //The default order of DVD picks is by dvd-release-date. 

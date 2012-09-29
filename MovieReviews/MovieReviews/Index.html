@@ -14,7 +14,6 @@
         <title>Movie Reviews</title>
         <meta name="description" content="Awesome movie review site" />
         <meta name="author" content="Alden Quimby">
-        <link rel="shortcut icon" href="Images/favicon.ico" type="image/x-icon" />
 
         <!-- stylesheets -->
         <link href="Styles/movies.css" type="text/css" rel="stylesheet" />
@@ -49,7 +48,7 @@
                         <span class="icon-bar"></span>
                         <span class="icon-bar"></span>
                     </a>
-                    <a class="brand" href="Default.html">Movie Reviews</a>
+                    <a class="brand" href="Index.html">Movie Reviews</a>
                     <div class="nav-collapse collapse">
 
                         <p class="navbar-text pull-right">
@@ -58,10 +57,10 @@
 
                         <ul class="nav">
                             <li class="active">
-                                <a href="Default.html">Home</a>
+                                <a href="Index.html">Home</a>
                             </li>
                             <li>
-                                <a href="Default.html">About</a>
+                                <a href="Index.html">About</a>
                             </li>
                             <li class="dropdown">
                                 <a href="#" id="drop2" role="button" class="dropdown-toggle" data-toggle="dropdown">Dropdown 2 <b class="caret"></b></a>
@@ -88,7 +87,7 @@
                                     <i class="icon-search"></i>
                                 </span>
                                 <input type="text" class="input-large search-query" id="navSearchQuery" placeholder="Search titles, genres, actors, etc.">
-                                <button type="submit" class="btn" id="navSearchButton" onclick="return false;">Search</button>
+                                <button type="submit" class="btn" id="navSearchButton" onclick="return false;" data-loading-text="Searching...">Search</button>
                             </div>
                         </form>
                         
@@ -97,7 +96,7 @@
             </div>
         </div>
 
-        <div class="container-fluid">
+        <div class="container-fluid" id="primaryContainer">
             <div class="row-fluid">
                 <!--                <div class="span2">
                                         <div class="well sidebar-nav">
@@ -164,6 +163,7 @@
                     </div>
                 </div>
             </div>
+            <hr>
             <div class="row-fluid">
                 <div class="span12" id="movie-list"></div>
             </div>
@@ -180,7 +180,7 @@
             </footer>
 
         </div>
-     
+
         <!-- scripts -->
         <!-- at bottom so page loads quick -->
         
@@ -195,13 +195,36 @@
                     
                     $.Mustache.addFromDom();
 
-                    
                     var baseUrl = 'http://api.nytimes.com/svc/movies/v2';
+                    var apiKey = 'bd2994d7e713ac0c7c58f238661910bb:19:64484326';
 
                     var settings = {
-                        apiKey: 'bd2994d7e713ac0c7c58f238661910bb:19:64484326',
-                        getSearchUrl: function () {
-                            return baseUrl + '/reviews/search?';
+                        getSearchUrl: function (query, offset, criticsPick, thousandBest, dvd, reviewer, pubDate, openDate) {
+                            var url = baseUrl + '/reviews/search?api-key=' + apiKey + '&query=' + query;
+                            
+                            if (offset) {
+                                url += "&offset=" + offset;
+                            }
+                            if (criticsPick) {
+                                url += "&critics-pick=" + criticsPick;
+                            }
+                            if (thousandBest) {
+                                url += "&thousand-best=" + thousandBest;
+                            }
+                            if (dvd) {
+                                url += "&dvd=" + dvd;
+                            }
+                            if (reviewer) {
+                                url += "&reviewer=" + reviewer;
+                            }
+                            if (pubDate) {
+                                url += "&publication-date=" + pubDate;
+                            }
+                            if (openDate) {
+                                url += "&opening-date=" + openDate;
+                            }
+
+                            return url;
                         },
                         getBioUrl: function (reviewerName) {
                             return baseUrl + '/critics/' + reviewerName.replace(/ /g, '-') + '?';
@@ -238,18 +261,34 @@
 </script>
 
 <script id="movie-row" type="text/html">
-    <div class="row-fluid">
+    <div class="row-fluid" style="padding-bottom:10px;">
         {{#movies}}
         <div class="span3">
             <div class="well">
                 <h4>{{& title}}</h4>
                 <img src="{{imgSrc}}" alt="" class="pull-left" style="padding-right:10px;" />
                 <div>
-                    <p><small><strong>{{& headline}}.</strong> {{& summary}}</small></p>
-                    <p><a class="btn" href="#">View details »</a></p>
+                    <p><small><strong>{{& headline}}.</strong><span class="summary"> {{& summary}}</span></small></p>
+                    <p><a class="btn" href="#" data-movieid="{{movieId}}">View details »</a></p>
                 </div>
             </div>
         </div>
         {{/movies}}            
+    </div>
+</script>
+
+<script id="movie-detail" type="text/html">
+    <h4>{{& title}}</h4>
+    <img src="{{imgSrc}}" alt="" class="pull-left" style="padding-right: 10px;" />
+    <div>
+        <p><small><strong>{{& headline}}.</strong> {{& summary}}</small></p>
+        <p><a class="btn" href="#" data-movieid="{{movieId}}">View details »</a></p>
+    </div>
+</script>
+
+<script id="alert" type="text/html">
+    <div class="alert alert-error fade in">
+        <button type="button" class="close" data-dismiss="alert">×</button>
+        <strong>Oops!</strong> {{message}}
     </div>
 </script>
