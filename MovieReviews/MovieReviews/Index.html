@@ -156,14 +156,14 @@
                                     </div>-->
 
                 <div class="span12">
-                    <div class="hero-unit" id="primaryMovie">
+                    <div class="hero-unit" id="primaryMovie" style="display:none;">
                         <h1>Hello, world!</h1>
                         <p class="movie-description">This is a template for a simple marketing or informational website. It includes a large callout called the hero unit and three supporting pieces of content. Use it as a starting point to create something more unique.</p>
                         <p><a class="btn btn-primary btn-large">Learn more »</a></p>
                     </div>
                 </div>
             </div>
-            <hr>
+            <hr id="movie-list-separator">
             <div class="row-fluid">
                 <div class="span12" id="movie-list"></div>
             </div>
@@ -227,7 +227,8 @@
                             return url;
                         },
                         getBioUrl: function (reviewerName) {
-                            return baseUrl + '/critics/' + reviewerName.replace(/ /g, '-') + '?';
+                            var nameForUrl = reviewerName.replace(/ /g, '-').replace(/\./g, '');
+                            return baseUrl + '/critics/' + nameForUrl + '?api-key=' + apiKey;
                         },
                     };
 
@@ -268,22 +269,64 @@
                 <h4>{{& title}}</h4>
                 <img src="{{imgSrc}}" alt="" class="pull-left" style="padding-right:10px;" />
                 <div>
-                    <p><small><strong>{{& headline}}.</strong><span class="summary"> {{& summary}}</span></small></p>
-                    <p><a class="btn" href="#" data-movieid="{{movieId}}">View details »</a></p>
+                    <p><small>
+                           <strong>{{& headline}}.</strong>
+                           <!--<span class="summary"> {{& summary}}</span>-->
+                       </small></p>
+                    <p>
+                        <a href="#movie-detail-{{movieId}}" role="button" class="btn" data-toggle="modal">View details »</a>
+                    </p>
                 </div>
             </div>
+        </div>
+        <div class="modal hide fade" id="movie-detail-{{movieId}}" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div id="movie-detail-modal-{{movieId}}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h3>{{& title}}</h3>
+                </div>
+                <div class="modal-body">
+
+                    <img src="{{imgSrc}}" alt="" class="pull-left" style="padding-right: 10px;" />
+
+                    <small>{{#relatedUrls}}
+                        <p><a href="{{url}}">{{suggested_link_text}}</a></p>
+                        {{/relatedUrls}}
+                
+                        <p>Reviewed by {{reviewerName}} on {{reviewPubDate}}</p>
+                        <p>Read the full NYT review <a href="{{reviewUrl}}">here</a></p>
+
+                        {{#isThousandBest}}
+                        <p>Thousan best!</p>
+                        {{/isThousandBest}}
+
+                        {{#isCriticsPick}}
+                        <p>Critics Pick!</p>
+                        {{/isCriticsPick}}
+                
+                        {{#headline}}
+                        <p><strong>{{& headline}}.</strong>{{& summary}}</p>
+                        {{/headline}}
+
+                        <p>{{reviewSnippet}}</p>
+
+                    </small>
+                </div>
+                <div class="modal-footer" style="max-height: 120px; overflow-y: auto;">
+                    <div id="reviewer-bio-modal-{{movieId}}">
+                        <p>Learn more about <a href="#" class="reviewer-bio" data-id="{{movieId}}">{{reviewerName}}</a></p>
+                    </div>
+                </div>
+            </div>
+            <div id=""></div>
         </div>
         {{/movies}}            
     </div>
 </script>
 
-<script id="movie-detail" type="text/html">
-    <h4>{{& title}}</h4>
-    <img src="{{imgSrc}}" alt="" class="pull-left" style="padding-right: 10px;" />
-    <div>
-        <p><small><strong>{{& headline}}.</strong> {{& summary}}</small></p>
-        <p><a class="btn" href="#" data-movieid="{{movieId}}">View details »</a></p>
-    </div>
+<script id="biography" type="text/html">
+    <h5>{{& reviewerName}}</h5>
+    <p>{{& bioText}}</p>
 </script>
 
 <script id="alert" type="text/html">

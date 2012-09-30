@@ -1,2 +1,2 @@
-logo/icon from http://blogs.e-rockford.com/applesauce/files/2012/07/Movies.jpg
+no_image_avail from http://www.worldimpex.com/images/no_image_available.gif
 data from http://developer.nytimes.com/docs/read/movie_reviews_api
