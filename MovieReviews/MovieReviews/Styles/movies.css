@@ -2,6 +2,42 @@
     padding-top: 10px;
     padding-bottom: 10px;
 }
-.sidebar-nav {
-    padding: 9px 0;
+.movie-row {
+    padding-bottom: 10px;
+}
+.movie-detail {
+    margin-top: 10px;
+    width: 45px;
+}
+.movie-detail-img {
+    padding-right: 20px;
+}
+.movie-img {
+    padding-right: 10px;
+}
+.movie-detail-footer {
+    max-height: 120px; 
+    overflow-y: auto;
+}
+.movie-detail-review {
+    padding-top: 10px;
+}
+div.input-prepend.date-field {
+    margin-left: 5px;
+}
+.date-field input {
+    width: 130px;   
+}
+a.header-link {
+    color: #999999;
+}
+div.span2.date-separator {
+    width: 3%;
+    margin-left: 5px;
+}
+div.span2.open-date {
+    width: 15%;   
+}
+.main-search {
+    padding-top: 20px;
 }

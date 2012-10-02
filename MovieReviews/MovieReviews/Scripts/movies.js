@@ -1,7 +1,8 @@
-﻿
+﻿var adq = adq || {};
+
 (function (module) {
 
-    module.search = {
+    module.movieReviews = {
 
         init: function (settings) {
             var self = this;
@@ -17,12 +18,12 @@
 
                 if (query == '') {
                     queryObj.parents('.control-group').addClass('error');
-                    queryObj.parents('.control-group').find('.help-inline').show();
+                    queryObj.parents('.control-group').find('.add-on').removeClass('hidden');
                     return;
                 }
 
                 queryObj.parents('.control-group').removeClass('error');
-                queryObj.parents('.control-group').find('.help-inline').hide();
+                queryObj.parents('.control-group').find('.add-on').addClass('hidden');
 
                 // no offset for initial query
                 self.search = { query: query, offset: 0 };
@@ -228,15 +229,4 @@
 
     };
 
-})(adq.module('movieReviews'));
-
-
-//** up to 3 of the following FILTERS - omit for all
-//query - keywords; matches titles and indexed terms =wild+west or ='wild+west' for exact match
-//critics-pick (Y/N) 
-//thousand-best (Y/N) - 1000 best movies ever
-//reviewer - 'manohla-dargis'
-//publication-date - of review, start and end date: YYYY-MM-DD;YYYY-MM-DD
-//opening-date - of movie in NY, single date: YYYY-MM-DD
-
-//relatedUrl types overview, showtimes, awards, community, trailers
+})(adq);

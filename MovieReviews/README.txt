@@ -22,3 +22,9 @@ it clear that the user should wait
 
 When a page number is clicked, all page numbers are disabled, to make it clear that
 the user should wait for the next page of information to load
+
+Main search:
+Shows things important for choosing results: title, image, headline, opening date, critics pick
+
+More info:
+Links to show times, NYT review, and in the footer, can get biography of reviewer
