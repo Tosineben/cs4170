@@ -1,12 +1,4 @@
-﻿<!--
-    Alden Quimby
-    adq2101@columbia.edu
-    describe the page here
-    uses jquery
-    uses bootstrap for ui components
-    list any influences for design
- -->
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
     
     <head>
@@ -26,7 +18,6 @@
             <script src="https://raw.github.com/jonnyreeves/jquery-Mustache/master/src/jquery-Mustache.js" type="text/javascript"></script>
             <script src="https://raw.github.com/timrwood/moment/master/min/moment.min.js" type="text/javascript"></script>
             <script src="https://raw.github.com/documentcloud/underscore/master/underscore-min.js" type="text/javascript"></script>
-            <script src="https://raw.github.com/twitter/bootstrap/master/docs/assets/js/bootstrap.min.js" type="text/javascript"></script>
             -->
 
         <!-- delete these before handing in -->
@@ -35,134 +26,62 @@
         <script src="Scripts/jquery-Mustache.js"></script>
         <script src="Scripts/moment.js"></script>
         <script src="Scripts/underscore.js"></script>
-        <script src="Scripts/bootstrap.js" type="text/javascript"></script>
     </head>
 
     <body>
-
-        <div class="navbar navbar-inverse navbar-fixed-top">
-            <div class="navbar-inner">
-                <div class="container-fluid">
-                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                    </a>
-                    <a class="brand" href="Index.html">Movie Reviews</a>
-                    <div class="nav-collapse collapse">
-
-                        <p class="navbar-text pull-right">
-                            Super awesome movie reviews, by <a href="http://www.nytimes.com/pages/movies/index.html" target="_blank" class="navbar-link">NYT</a>
-                        </p>
-
-                        <ul class="nav">
-                            <li class="active">
-                                <a href="Index.html">Home</a>
-                            </li>
-                            <li>
-                                <a href="Index.html">About</a>
-                            </li>
-                            <li class="dropdown">
-                                <a href="#" id="drop2" role="button" class="dropdown-toggle" data-toggle="dropdown">Dropdown 2 <b class="caret"></b></a>
-                                <ul class="dropdown-menu" role="menu" aria-labelledby="drop2">
-                                    <li><a tabindex="-1" href="#">Action</a></li>
-                                    <li><a tabindex="-1" href="#">Another action</a></li>
-                                    <li class="divider"></li>
-                                    <li class="nav-header">Nav header</li>
-                                    <li><a tabindex="-1" href="#">Separated link</a></li>
-                                    <li class="dropdown-submenu">
-                                        <a tabindex="-1" href="#">More options</a>
-                                        <ul class="dropdown-menu">
-                                            <li><a tabindex="-1" href="#">Cool Shit</a></li>
-                                            <li><a tabindex="-1" href="#">Less Cool Shit</a></li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </li>
-                        </ul>
-
-                        <form class="navbar-form">
-                            <div class="input-prepend input-append">
-                                <span class="add-on">
-                                    <i class="icon-search"></i>
-                                </span>
-                                <input type="text" class="input-large search-query" id="navSearchQuery" placeholder="Search titles, genres, actors, etc.">
-                                <button type="submit" class="btn" id="navSearchButton" onclick="return false;" data-loading-text="Searching...">Search</button>
-                            </div>
-                        </form>
-                        
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="container-fluid" id="primaryContainer">
+        <div class="container-fluid">
+            <h1>Movie Reviews
+                <small> - brought to you by 
+                    <a style="color: #999999" href="http://www.nytimes.com/pages/movies/index.html">The New York Times</a>
+                </small>
+            </h1>
             <div class="row-fluid">
-                <!--                <div class="span2">
-                                        <div class="well sidebar-nav">
-                                            <ul class="nav nav-list">
-                                                <li class="nav-header">Sidebar</li>
-                                                <li class="active"><a href="#">Link</a></li>
-                                                <li><a href="#">Link</a></li>
-                                                <li class="nav-header">Sidebar</li>
-                                                <li><a href="#">Link</a></li>
-                                                <li><a href="#">Link</a></li>
-                                                <li class="nav-header">Sidebar</li>
-                                                <li><a href="#">Link</a></li>
-                                                <li><a href="#">Link</a></li>
-                                            </ul>
-                                        </div>
-                                    </div>-->
-                
-                <!--                <div class="span2">
-                                        <div class="row-fluid">
-                                            <form class="form-horizontal">
-                                                <legend>Crazy form</legend>
-                                                <div class="control-group">
-                                                    <label class="control-label" for="inputEmail">Email</label>
-                                                    <div class="controls">
-                                                        <div class="input-prepend">
-                                                            <span class="add-on">
-                                                                <i class="icon-envelope"></i>
-                                                            </span>
-                                                            <input class="input-medium" id="inputEmail" type="text" placeholder="Enter your email address">
-                                                        </div>
-                                                        <span class="help-inline">Must have @ symbol dood</span>
-                                                    </div>
-                                                </div>
-                                                <div class="control-group">
-                                                    <label class="control-label" for="inputGenre">Genre</label>
-                                                    <div class="controls">
-                                                        <select class="span2" id="inputGenre">
-                                                            <option>Comedy</option>
-                                                            <option>Horror</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="control-group">
-                                                    <div class="controls">
-                                                        <label class="checkbox">
-                                                            <input type="checkbox">
-                                                            Remember me
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div class="form-actions">
-                                                    <button type="submit" class="btn btn-primary">Do It Up</button>
-                                                    <button type="button" class="btn">Cancel</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>-->
-
                 <div class="span12">
-                    <div class="hero-unit" id="primaryMovie" style="display:none;">
-                        <h1>Hello, world!</h1>
-                        <p class="movie-description">This is a template for a simple marketing or informational website. It includes a large callout called the hero unit and three supporting pieces of content. Use it as a starting point to create something more unique.</p>
-                        <p><a class="btn btn-primary btn-large">Learn more »</a></p>
-                    </div>
+                    <form class="form-search">
+                        <div class="control-group">
+                            <div class="controls">
+                                <input class="input-xlarge" id="mainSearch-query" type="text" placeholder="Search by title or keyword...">
+                                <span class="help-inline" style="display:none;">Please enter a keyword</span>
+                            </div>
+                        </div>
+                        Opened in Theatres between
+                        <div class="control-group">
+                            <div class="controls controls-row">
+                                <div class="input-prepend">
+                                    <span class="add-on">
+                                        <i class="icon-calendar"></i>
+                                    </span>
+                                    <input style="width: 130px;" type="date" id="mainSearch-startDate" placeholder="mm/dd/yyyy">
+                                </div>
+                                and
+                                <div class="input-prepend">
+                                    <span class="add-on">
+                                        <i class="icon-calendar"></i>
+                                    </span>
+                                    <input style="width: 130px;" type="date" id="mainSearch-endDate" placeholder="mm/dd/yyyy">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <div class="controls">
+                                <label class="checkbox">
+                                    <span class="add-on">
+                                        <i class="icon-star"></i>
+                                    </span>
+                                    <input type="checkbox" id="mainSearch-criticsPick">
+                                    Critics' Picks Only
+                                </label>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <div class="controls">
+                                <button type="submit" class="btn btn-primary" id="mainSearch-button" onclick="return false;" data-loading-text="Searching...">Search for movie reviews</button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
+            <div id="alertContainer"></div>
             <hr id="movie-list-separator">
             <div class="row-fluid">
                 <div class="span12" id="movie-list"></div>
@@ -183,7 +102,7 @@
 
         <!-- scripts -->
         <!-- at bottom so page loads quick -->
-        
+        <script src="Scripts/bootstrap.js" type="text/javascript"></script>
         <script src="Scripts/adq.module.js" type="text/javascript"></script>
         <script src="Scripts/movies.js" type="text/javascript"></script>
         
@@ -193,32 +112,21 @@
 
                 $(function () {
                     
-                    $.Mustache.addFromDom();
-
                     var baseUrl = 'http://api.nytimes.com/svc/movies/v2';
                     var apiKey = 'bd2994d7e713ac0c7c58f238661910bb:19:64484326';
 
                     var settings = {
-                        getSearchUrl: function (query, offset, criticsPick, thousandBest, dvd, reviewer, pubDate, openDate) {
-                            var url = baseUrl + '/reviews/search?api-key=' + apiKey + '&query=' + query;
+                        getSearchUrl: function (query, offset, criticsPick, openDate) {
+                            var url = baseUrl + '/reviews/search?api-key=' + apiKey;
                             
+                            if (query) {
+                                url += '&query=' + query;
+                            }
                             if (offset) {
                                 url += "&offset=" + offset;
                             }
                             if (criticsPick) {
                                 url += "&critics-pick=" + criticsPick;
-                            }
-                            if (thousandBest) {
-                                url += "&thousand-best=" + thousandBest;
-                            }
-                            if (dvd) {
-                                url += "&dvd=" + dvd;
-                            }
-                            if (reviewer) {
-                                url += "&reviewer=" + reviewer;
-                            }
-                            if (pubDate) {
-                                url += "&publication-date=" + pubDate;
                             }
                             if (openDate) {
                                 url += "&opening-date=" + openDate;
@@ -233,7 +141,10 @@
                     };
 
                     adq.module('movieReviews').search.init(settings);
-                    
+
+                    // initialize mustache templates
+                    $.Mustache.addFromDom();
+
                 });
 
             })();
@@ -264,57 +175,62 @@
 <script id="movie-row" type="text/html">
     <div class="row-fluid" style="padding-bottom:10px;">
         {{#movies}}
-        <div class="span3">
-            <div class="well">
-                <h4>{{& title}}</h4>
-                <img src="{{imgSrc}}" alt="" class="pull-left" style="padding-right:10px;" />
-                <div>
-                    <p><small>
-                           <strong>{{& headline}}.</strong>
-                           <!--<span class="summary"> {{& summary}}</span>-->
-                       </small></p>
-                    <p>
-                        <a href="#movie-detail-{{movieId}}" role="button" class="btn" data-toggle="modal">View details »</a>
-                    </p>
-                </div>
+        <div class="span3 well">
+            <h4>{{& title}}</h4>
+            <div class="pull-left" style="padding-right:10px;">
+                <img src="{{imgSrc}}" alt="" class="pull-left" />
+                <p>
+                    <a href="#movie-detail-{{movieId}}" role="button" class="btn" data-toggle="modal" style="margin-top: 10px; width:45px;">Details</a>
+                </p>
+            </div>
+            <div>
+                <p>Opened: {{openedInTheatresDate}}</p>
+                <p>{{& headline}}</p>
+                {{#isCriticsPick}}
+                <p class="text-success"><strong><i class="icon-star"></i> Critics' Pick!</strong></p>
+                {{/isCriticsPick}}
             </div>
         </div>
         <div class="modal hide fade" id="movie-detail-{{movieId}}" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
             <div id="movie-detail-modal-{{movieId}}">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                    <h3>{{& title}}</h3>
+                    <h3>{{& title}} <small>opened {{openedInTheatresDate}}</small></h3>
                 </div>
                 <div class="modal-body">
 
-                    <img src="{{imgSrc}}" alt="" class="pull-left" style="padding-right: 10px;" />
+                    <img src="{{imgSrc}}" alt="" class="pull-left" style="padding-right: 20px;" />
 
-                    <small>{{#relatedUrls}}
-                        <p><a href="{{url}}">{{suggested_link_text}}</a></p>
-                        {{/relatedUrls}}
-                
-                        <p>Reviewed by {{reviewerName}} on {{reviewPubDate}}</p>
-                        <p>Read the full NYT review <a href="{{reviewUrl}}">here</a></p>
+                    {{#headline}}
+                    <p><strong>{{& headline}}</strong></p>
+                    {{/headline}}
+                    
+                    {{#summary}}
+                    <p>{{& summary}}</p>
+                    {{/summary}}
+                    
+                    {{#reviewSnippet}}
+                    <p>Review summary: {{reviewSnippet}}</p>
+                    {{/reviewSnippet}}
 
-                        {{#isThousandBest}}
-                        <p>Thousan best!</p>
-                        {{/isThousandBest}}
-
-                        {{#isCriticsPick}}
-                        <p>Critics Pick!</p>
-                        {{/isCriticsPick}}
-                
-                        {{#headline}}
-                        <p><strong>{{& headline}}.</strong>{{& summary}}</p>
-                        {{/headline}}
-
-                        <p>{{reviewSnippet}}</p>
-
+                    <p style="padding-top:10px;">Read the <a href="{{reviewUrl}}" target="_blank">New York Times reivew</a>, written by {{reviewerName}} on {{reviewPubDate}}</p>
+                    
+                    {{#anyUrls}}
+                    <small>
+                        For more information: 
+                        <ul>
+                            {{#relatedUrls}}
+                            <li>
+                                <a href="{{url}}">{{linkText}}</a>
+                            </li>
+                            {{/relatedUrls}}
+                        </ul>
                     </small>
+                    {{/anyUrls}}
                 </div>
                 <div class="modal-footer" style="max-height: 120px; overflow-y: auto;">
                     <div id="reviewer-bio-modal-{{movieId}}">
-                        <p>Learn more about <a href="#" class="reviewer-bio" data-id="{{movieId}}">{{reviewerName}}</a></p>
+                        <p>Learn more about the reviewer, <a href="#" class="reviewer-bio" data-id="{{movieId}}">{{reviewerName}}</a></p>
                     </div>
                 </div>
             </div>
