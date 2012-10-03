@@ -156,7 +156,9 @@
         <div class="span3 well">
             <h4>{{& title}}</h4>
             <div class="pull-left movie-img">
-                <img src="{{imgSrc}}" alt="" class="pull-left" />
+                <div style="height:75px;width:75px;">
+                    <img src="{{imgSrc}}" alt="" class="pull-left" />
+                </div>
                 <p>
                     <a href="#movie-detail-{{movieId}}" role="button" class="btn movie-detail" data-toggle="modal">Details</a>
                 </p>

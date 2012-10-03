@@ -8,6 +8,7 @@
             var self = this;
             self.settings = settings;
 
+            // show/hide the advanced/quick search
             $('#advancedSearchLink').click(function() {
                 $(this).hide();
                 $('#quickSearchLink').show();
@@ -35,6 +36,7 @@
                     return;
                 }
 
+                // clear any previous errors from the form
                 queryObj.parents('.control-group').removeClass('error');
                 queryObj.parents('.control-group').find('.add-on').addClass('hidden');
                 queryObj.attr('placeholder', 'Search by title or keyword...');
@@ -54,8 +56,8 @@
                 self.doSearch(); 
             });
 
+            // when page num is clicked, keep all the same search data, use new offset
             $('.page-number').live('click', function(event) {
-                // keep all the same search data, use new offset
                 self.search.offset = parseInt($(event.target).attr('data-offset'));
                 self.doSearch();
             });
@@ -66,7 +68,7 @@
                 var url = self.settings.getBioUrl(name);
                 var proxyUrl = "proxy.php?url=" + encodeURIComponent(url);
                 $.getJSON(proxyUrl, function (rawResponse) {
-                    var resp = jQuery.parseJSON(rawResponse);
+                    var resp = $.parseJSON(rawResponse);
                     var bio = self.getBioForDisplay(resp.results[0]);
                     $('#reviewer-bio-modal-' + movieId).mustache('biography', bio, {method:'html'});
                 });
@@ -76,27 +78,25 @@
         doSearch: function() {
             var self = this;
 
-            $('#navSearchButton').button('loading');
+            // change search button to loading status
             $('#mainSearch-button').button('loading');
 
-            var url = self.settings.getSearchUrl(self.search.query, self.search.offset, self.search.criticsPick, self.search.openDate);
-
-            var proxyUrl = "proxy.php?url=" + encodeURIComponent(url);
-
             // disable page numbers to make it clear that we're in the middle of searching
-            $.each($('.page-number'), function(index, pageNumber) {
+            $.each($('.page-number'), function (index, pageNumber) {
                 $(pageNumber).parent().addClass('disabled');
             });
-            
+
+            var url = self.settings.getSearchUrl(self.search.query, self.search.offset, self.search.criticsPick, self.search.openDate);
+            var proxyUrl = "proxy.php?url=" + encodeURIComponent(url);
+
             $.getJSON(proxyUrl, function (rawResponse) {
 
-                var resp = jQuery.parseJSON(rawResponse);
+                var resp = $.parseJSON(rawResponse);
 
                 // close any open alerts if user hasn't yet
                 $('.alert').alert('close');
 
                 // reset search button now that search is complete
-                $('#navSearchButton').button('reset');
                 $('#mainSearch-button').button('reset');
 
                 if (resp && resp.status == "OK") {
@@ -150,7 +150,6 @@
             var movieList = $('#movie-list');
 
             movieList.html('');
-
             $.each(chunks, function(index, chunk) {
                 movieList.mustache('movie-row', chunk);
             });
@@ -161,7 +160,7 @@
             });
         },
 
-        displayPageNumbers: function (numResults, offset) {
+        displayPageNumbers: function (numResults, currentOffset) {
             var moviesPerPage = 20;
             var pageList = $('#pagination-list');
             pageList.show();
@@ -173,13 +172,13 @@
             }
 
             // make sure offset is a multiple of moviesPerPage
-            offset = moviesPerPage * Math.floor(offset / moviesPerPage);
+            currentOffset = moviesPerPage * Math.floor(currentOffset / moviesPerPage);
 
             var numPages = Math.floor(numResults / moviesPerPage);
-            var activePage = offset / moviesPerPage;
+            var activePage = currentOffset / moviesPerPage;
 
-            var prevPage = { offset: offset - moviesPerPage, numDisplay: '&larr; Prev', disabled: activePage == 0 };
-            var nextPage = { offset: offset + moviesPerPage, numDisplay: 'Next &rarr;', disabled: activePage == numPages };
+            var prevPage = { offset: currentOffset - moviesPerPage, numDisplay: '&larr; Prev', disabled: activePage == 0 };
+            var nextPage = { offset: currentOffset + moviesPerPage, numDisplay: 'Next &rarr;', disabled: activePage == numPages };
 
             var pages = [prevPage];
 
@@ -192,9 +191,11 @@
 
             pageList.mustache('page-numbers', { pages: pages }, { method: 'html' });
         },
-
+        
         fixUpMovieHeights: function () {
-            var maxHeight = 130;
+            // make sure all thumbnails are the same size
+
+            var maxHeight = 0;
 
             $('#movie-list').find('.well').each(function(index, movie) {
                 var height = $(movie).height();
