@@ -48,9 +48,15 @@
                     self.search.criticsPick = "Y";
                 }
 
-                if (start && end) {
-                    var dateRange = start.format("YYYY-MM-DD") + ';' + end.format("YYYY-MM-DD");
-                    self.search.openDate = dateRange;
+                if (start || end) {
+                    if (!start) {
+                        start = moment('1850-1-1');
+                    }
+                    if (!end) {
+                        end = moment();
+                    }
+
+                    self.search.openDate = start.format("YYYY-MM-DD") + ';' + end.format("YYYY-MM-DD");
                 }
 
                 self.doSearch(); 
@@ -100,9 +106,20 @@
                 $('#mainSearch-button').button('reset');
 
                 if (resp && resp.status == "OK") {
-                    self.displayPageNumbers(resp.num_results, self.search.offset);
-                    self.displaySearchResults(resp.results);
-                    self.fixUpMovieHeights();
+                    if (!resp.results || resp.num_results == 0) {
+                        self.displayAlert('Your search returned no results. Try searching for something less specific.', false);
+
+                        // keep the previous search so page numbers from existing results work
+                        self.search = self.lastSearch; 
+                        self.displayPageNumbers(self.lastSearch.num_results, self.lastSearch.offset);
+                    }
+                    else {
+                        self.displayPageNumbers(resp.num_results, self.search.offset);
+                        self.displaySearchResults(resp.results);
+                        self.fixUpMovieHeights();
+                        self.lastSearch = self.search;
+                        self.lastSearch.num_results = resp.num_results;
+                    }
                 }
                 else {
                     self.displayAlert('Looks like the New York Times Movie Reviews API might be down, please try again later.', true);
@@ -123,11 +140,6 @@
 
         displaySearchResults: function(results){
             var self = this;
-
-            if (!results || results.length == 0) {
-                self.displayAlert('Your search returned no results. Try searching for something less specific.', false);
-                return;
-            }
             
             // scroll page to top of movie list, slowly
             var top = $('#movie-list-separator').position().top;

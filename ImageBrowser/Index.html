@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+    
+    <head>
+        <meta charset="utf-8">
+        <title>Image Browser</title>
+        <meta name="description" content="Awesome image browsing site" />
+        <meta name="author" content="Alden Quimby">
+
+        <!-- stylesheets -->
+        <link href="Styles/bootstrap/bootstrap.min.css" type="text/css" rel="stylesheet" />
+        <link href="Styles/bootstrap/bootstrap-responsive.min.css" type="text/css" rel="stylesheet" />
+        <link href="styles/imagebrowser.css" type="text/css" rel="stylesheet" />
+    </head>
+
+    <body>
+        
+        <div class="container-fluid">
+            <div id="alertContainer"></div>
+
+        </div>
+
+        <!-- scripts at bottom so page loads quick -->
+        <script type="text/javascript" src="scripts/jquery-1.8.1.min.js"></script>
+        <script type="text/javascript" src="scripts/mustache.js"></script>
+        <script type="text/javascript" src="scripts/jquery-Mustache.js"></script>
+        <script type="text/javascript" src="scripts/underscore.js"></script>
+        <script type="text/javascript" src="scripts/bootstrap.min.js"></script>
+        <script type="text/javascript" src="scripts/imagebrowser.js"></script>
+        <script type="text/javascript">
+            (function () {
+            
+                $(function () {
+
+                    $.Mustache.addFromDom();
+
+                    adq.imagebrowser.init({});
+            
+                });
+            
+            })();
+        </script>
+
+    </body>
+
+</html>
+
+<!-- mustache templates -->
+
+<script id="alert" type="text/html">
+    <div class="alert alert-error fade in">
+        <button type="button" class="close" data-dismiss="alert">×</button>
+        <strong>Oops!</strong> {{message}}
+    </div>
+</script>

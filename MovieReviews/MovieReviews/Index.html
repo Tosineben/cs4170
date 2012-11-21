@@ -15,53 +15,56 @@
 
     <body>
         <div class="container-fluid">
-            <h1>Movie Reviews
-                <small> - brought to you by 
-                    <a class="header-link" href="http://www.nytimes.com/pages/movies/index.html">The New York Times</a>
-                </small>
-            </h1>
-            <div class="row-fluid main-search">
-                <form class="form-horizontal">
-                    <div class="control-group">
-                        <div class="span4 input-append">
-                            <input class="span12" id="mainSearch-query" type="text" placeholder="Search by title or keyword...">
-                            <span class="add-on hidden">
-                                <i class="icon-warning-sign"></i>
-                            </span>
-                        </div>
-                        <div class="span2">
-                            <a href="#" id="quickSearchLink" class="hide" onclick="return false;">Quick Search <i class="icon-chevron-up"></i></a>
-                            <a href="#" id="advancedSearchLink" onclick="return false;">Advanced Search <i class="icon-chevron-down"></i></a>
-                        </div>
-                    </div>
-                    <div id="advancedSearch" class="hide">
+            <div class="hero-wrapper">
+                <h1>Movie Reviews
+                    <br />
+                    <small>Brought to you by 
+                        <a class="header-link" href="http://www.nytimes.com/pages/movies/index.html">The New York Times</a>
+                    </small>
+                </h1>
+                <div class="row-fluid main-search">
+                    <form class="form-horizontal">
                         <div class="control-group">
-                            <label>Opened in theatres between</label>
-                            <div class="input-prepend">
-                                <span class="add-on">
-                                    <i class="icon-calendar"></i>
+                            <div class="input-append pull-left searchBar">
+                                <input class="span11" id="mainSearch-query" type="text" placeholder="Search by title or keyword...">
+                                <span class="add-on hidden">
+                                    <i class="icon-warning-sign"></i>
                                 </span>
-                                <input type="date" class="span9" id="mainSearch-start" placeholder="mm/dd/yyyy">
                             </div>
-                            <div class="start-end-separator">
-                                and
-                            </div>
-                            <div class="input-prepend">
-                                <span class="add-on">
-                                    <i class="icon-calendar"></i>
-                                </span>
-                                <input type="date" class="span9" id="mainSearch-end" placeholder="mm/dd/yyyy">
+                            <div class="span4 searchLinks">
+                                <a href="#" id="quickSearchLink" class="hide" onclick="return false;">Quick Search <i class="icon-chevron-up"></i></a>
+                                <a href="#" id="advancedSearchLink" onclick="return false;">Advanced Search <i class="icon-chevron-down"></i></a>
                             </div>
                         </div>
-                        <div class="control-group">
-                            <label class="checkbox">
-                                <input type="checkbox" id="mainSearch-criticsPick">
-                                <i class="icon-star"></i>Critics' Picks only
-                            </label>
+                        <div id="advancedSearch" class="hide">
+                            <div class="control-group">
+                                <label>Opened in theatres between</label>
+                                <div class="input-prepend">
+                                    <span class="add-on">
+                                        <i class="icon-calendar"></i>
+                                    </span>
+                                    <input type="date" class="span9" id="mainSearch-start" placeholder="mm/dd/yyyy">
+                                </div>
+                                <div class="start-end-separator">
+                                    and
+                                </div>
+                                <div class="input-prepend">
+                                    <span class="add-on">
+                                        <i class="icon-calendar"></i>
+                                    </span>
+                                    <input type="date" class="span9" id="mainSearch-end" placeholder="mm/dd/yyyy">
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="checkbox">
+                                    <input type="checkbox" id="mainSearch-criticsPick">
+                                    <i class="icon-star"></i>Critics' Picks only
+                                </label>
+                            </div>
                         </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary" id="mainSearch-button" onclick="return false;" data-loading-text="Searching...">Search</button>
-                </form>
+                        <button type="submit" class="btn btn-primary" id="mainSearch-button" onclick="return false;" data-loading-text="Searching...">Search</button>
+                    </form>
+                </div>
             </div>
             <div id="alertContainer"></div>
             <hr id="movie-list-separator">
@@ -202,14 +205,14 @@
                     <p class="movie-detail-review">
                         Read the <a href="{{reviewUrl}}" target="_blank">New York Times reivew</a>, written by {{reviewerName}} on {{reviewPubDate}}
                     </p>
-                    
+
                     {{#anyUrls}}
                     <small>
                         For more information: 
                         <ul>
                             {{#relatedUrls}}
                             <li>
-                                <a href="{{url}}">{{linkText}}</a>
+                                <a href="{{url}}" target="_blank">{{linkText}}</a>
                             </li>
                             {{/relatedUrls}}
                         </ul>
@@ -217,6 +220,12 @@
                     {{/anyUrls}}
                 </div>
                 <div class="modal-footer movie-detail-footer">
+                    {{#isCriticsPick}}
+                    <div class="pull-left text-success">
+                        <strong><i class="icon-star"></i> Critics' Pick!</strong>
+                    </div>
+                    {{/isCriticsPick}}
+
                     <div id="reviewer-bio-modal-{{movieId}}">
                         <p>Learn more about the reviewer, <a href="#" class="reviewer-bio" data-id="{{movieId}}">{{reviewerName}}</a></p>
                     </div>
@@ -229,7 +238,7 @@
 </script>
 
 <script id="biography" type="text/html">
-    <h5>{{& reviewerName}}</h5>
+    <p><strong>{{& reviewerName}}</strong></p>
     <p>{{& bioText}}</p>
 </script>
 

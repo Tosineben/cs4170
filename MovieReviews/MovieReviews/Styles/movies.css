@@ -2,16 +2,28 @@
     padding-top: 10px;
     padding-bottom: 10px;
 }
+.hero-wrapper{
+    width: 540px;
+    margin: 0px auto;
+    padding: 50px 0 0 50px;
+}
+.hero-wrapper .main-search {
+    padding-top: 40px;
+}
+.hero-wrapper .main-search .searchBar {
+    width: 50%;
+}
+.hero-wrapper .main-search .searchLinks {
+    width: 25%;
+    text-align: right;
+}
 a.header-link {
     color: #999999;
 }
-.main-search {
-    padding-top: 20px;
-}
 .start-end-separator {
     display: inline-block;
-    margin-left: -15px;
-    margin-right: 5px;
+    margin-left: -10px;
+    margin-right: 10px;
 }
 .movie-row {
     padding-bottom: 10px;
