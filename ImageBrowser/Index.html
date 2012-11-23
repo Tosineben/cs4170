@@ -26,7 +26,7 @@
         <script type="text/javascript" src="scripts/imagebrowser.js"></script>
         <script type="text/javascript">
 
-            var _isMouseDown, _points, _dollar, _ctx, _canvasRect;
+            var _isMouseDown, _points, _dollar, _ctx, _canvasRect, _undoActions, _currentImg, _prevImage;
 
             function getCanvasRect(canvas) {
                 var w = canvas.width;
@@ -48,7 +48,7 @@
                 x -= _canvasRect.x;
                 y -= _canvasRect.y - getScrollY();
                 if (_points.length > 0) {
-                    _ctx.clearRect(0, 0, _canvasRect.width, _canvasRect.height);                
+                    //_ctx.clearRect(0, 0, _canvasRect.width, _canvasRect.height);                
                 }
                 _points.length = 1;
                 _points[0] = new Point(x, y);
@@ -80,7 +80,7 @@
                     if (_points.length >= 10) {
                         var result = _dollar.Recognize(_points);
                         result = handleOrientation(result);
-                        drawText("Result: " + result.Name + " (" + result.Score + ").");
+                        handleResult(result);
                     } 
                     else {
                         drawText("Too few points made. Please try again.");
@@ -88,23 +88,114 @@
                 }
             }
 
+            function handleResult(result) {
+                drawText("Result: " + result.Name + " (" + result.Score + ").");
+                if (result.Name == "No match" || result.Score == 0) {
+                    displayAlert("Oops, we didn't understand that gesture, please try again.");
+                    return;
+                }
+
+                $('#gestures').find('img').css('border', '4px solid white');
+                var gesture;
+
+                if (result.Name == "line-left") {
+                    gesture = $('#gesture-left');
+                    moveLeft();
+                    _undoActions.push(moveRight);
+                }
+                else if (result.Name == "line-right") {
+                    gesture = $('#gesture-right').css('border', '4px solid blue');
+                    moveRight();
+                    _undoActions.push(moveLeft);
+                }
+                else if (result.Name == "S") {
+                    gesture = $('#gesture-sepia');
+                    applySepia();
+                    _undoActions.push(removeSepia);
+                }
+                else if (result.Name == "rotate") {
+                    gesture = $('#gesture-rotate');
+                    rotateRight();
+                    _undoActions.push(rotateLeft);
+                }
+                else if (result.Name == "U") {
+                    gesture = $('#gesture-undo');
+                    var undoAction = _undoActions.pop();
+                    if (undoAction != null) {
+                        if (undoAction.action != null) {
+                            undoAction.action(undoAction.args);
+                            thumbnailClick(undoAction.args[0]);
+                        }
+                        else {
+                            undoAction();                            
+                        }
+                    }
+                    else {
+                        displayAlert("Oops, there is nothing to undo.");
+                    }
+                }
+
+                // highlight gesture with blue border, fade out after 1 second
+                gesture.css('border', '4px solid blue');
+                setTimeout(function(){
+                    $({alpha:1}).animate({alpha:0}, {
+                        duration: 1000,
+                        step: function(){
+                            gesture.css('border-color','rgba(0,0,255,'+this.alpha+')');
+                        }
+                    });
+                }, 1000);
+            }
+
+            function displayAlert(msg) {
+
+            }
+
+            function moveLeft() {
+                var left = $('img[data-right="#' + $(_currentImg).attr('id') + '"]');
+                moveCarouselToFrame(left);
+                left.delay(1000).click();
+            }
+
+            function moveRight() {
+                var right = $($(_currentImg).data('right'));
+                moveCarouselToFrame(right);
+                right.delay(1000).click();
+            }
+
+            function moveCarouselToFrame(img) {
+                var frame = img.parents('.item').data('frame');
+                $('#myCarousel').carousel(frame);
+            }
+
+            function doCarouselAction() {
+                
+            }
+
+            function applySepia() {
+
+            }
+
+            function removeSepia() {
+
+            }
+
+            function rotateRight() {
+
+            }
+
+            function rotateLeft() {
+
+            }
+
             function handleOrientation(result) {
                 if (result.Name == "line") {
                     var leftToRight = _points[_points.length - 1].X - _points[0].X > 0;
                     if (leftToRight) {
-                        result.Name = "left to right line";
+                        result.Name = "line-left";
                     }
                     else { 
-                        result.Name = "right to left line";
-                    }
-                }
-                else if (result.Name == "line-vert") {
-                    var topToBottom = _points[_points.length - 1].Y - _points[0].Y > 0;
-                    if (topToBottom) {
-                        result.Name = "top to bottom line";
-                    }
-                    else { 
-                        result.Name = "bottom to top line";
+                        result.Name = "line-right";
                     }
                 }
                 return result;
@@ -148,6 +239,19 @@
                 }
             }
 
+            function printPoints() {
+                var a = "";
+                for (var i = 0; i < _points.length; i++) {
+                    var newX = _points[i].X;
+                    var newY = _points[i].Y;
+
+                    if (newX % 1 === 0 && newY % 1 === 0) {
+                        a += "new Point(" + newX + "," + newY + "), ";
+                    }
+                }
+                return a;
+            }
+
             (function () {
             
                 $(function() {
@@ -155,6 +259,10 @@
                     $.Mustache.addFromDom();
                     adq.imagebrowser.init({});
 
+                });
+
+                $(window).load(function() {
+                    
                     _points = new Array();
                     _dollar = new PDollarRecognizer();
 
@@ -167,6 +275,8 @@
                     _canvasRect = getCanvasRect(canvas);
 
                     _isMouseDown = false;
+
+                    _undoActions = new Array();
 
                     canvas.addEventListener("mousedown", function(evt) {
                         mouseDownEvent(evt.clientX, evt.clientY);
@@ -187,127 +297,178 @@
                     });
 
                     $('.thumbnail img').live('click', function() {
-                        _ctx.drawImage(this, 0, 0, _canvasRect.width, _canvasRect.height);
+                        if (_currentImg) {
+                            _undoActions.push({action:moveCarouselToFrame, args:$(_currentImg)});                            
+                        }
+                        thumbnailClick(this);
+                    });
+
+                    $('#myCarousel .item').each(function(i, e) {
+                        var imgs = $(e).find('img');
+                        imgs.first().attr('data-carousel', 'prev');
+                        imgs.last().attr('data-carousel', 'next');
                     });
 
                 });
-
-                $(window).load(function() {
-                    //replaceCanvas($('#image-baby'));
-                });
             
             })();
+
+            function thumbnailClick(img) {
+                $('.thumbnail').css('border', '1px solid #DDD');
+                $(img).parent().css('border', '1px solid blue');
+
+                _currentImg = img;
+                _ctx.drawImage(_currentImg, 0, 0, _canvasRect.width, _canvasRect.height);
+
+                // scroll page
+                //var top = $('#alertContainer').position().top - 20;
+                //$("html, body").animate({ scrollTop: top }, "slow");
+            }
 
         </script>
     </head>
 
     <body>
         <div class="container">
-            <div class="navbar navbar-inverse">
+            <div class="navbar">
                 <div class="navbar-inner">
                     <ul class="nav nav-pills">
-                        <a class="brand" href="#home-pane" data-toggle="tab">Title Home</a>
-                        <li><a href="#messages-pane" data-toggle="tab">Msgs</a></li>
-                        <li><a href="#settings-pane" data-toggle="tab">Stngs</a></li>
+                        <a class="brand" href="#home-pane" data-toggle="tab">Image Browser</a>
+                        <li class="active"><a id="explore-tab" href="#explore-pane" data-toggle="tab">Explore</a></li>
+                        <li><a href="#help-pane" data-toggle="tab">Help</a></li>
                     </ul>
                 </div>
             </div>
             <div class="tab-content">
-                <div class="tab-pane active" id="home-pane">Home stuff</div>
-                <div class="tab-pane" id="messages-pane">msgs stuff</div>
-                <div class="tab-pane" id="settings-pane">settings stuff</div>
-            </div>
-        </div>
-
-        <div class="container">
-            <input type="file"/>
-            <div class="pull-right">
-                <a href="#modal-help" data-toggle="modal">Help</a>
-            </div>
-            <div id="alertContainer">Image Browser</div>
-            <canvas id="myCanvas" width="540" height="405" oncontextmenu="return false;"></canvas>
-            <div class="row" style="padding-top:20px;">
-                <div class="span1"></div>
-                <div class="carousel slide span10" id="myCarousel">
-                    <div class="carousel-inner">
-                        <div class="item active">
-                            <ul class="thumbnails">
-                                <li class="span1"></li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Baby.jpg" alt="">
+                <div class="tab-pane" id="home-pane">
+                    Home stuff
+                </div>
+                <div class="tab-pane active" id="explore-pane">
+                    <div class="container">
+                        <div class="row" style="padding-top:20px;">
+                            <div class="span1"></div>
+                            <div class="carousel slide span10" id="myCarousel" style="margin-bottom:0px;">
+                                <div class="carousel-inner">
+                                    <div class="item active" data-frame="0">
+                                        <ul class="thumbnails">
+                                            <li class="span1"></li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-baby" data-right="#img-canoe" src="images/Baby.jpg" alt="">
+                                                </div>
+                                            </li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-canoe" data-right="#img-cat" src="images/Canoe.jpg" alt="">
+                                                </div>
+                                            </li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-cat" data-right="#img-highway" src="images/Cat.jpg" alt="">
+                                                </div>
+                                            </li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-highway" data-right="#img-leopard" src="images/Highway.jpg" alt="">
+                                                </div>
+                                            </li>
+                                        </ul>
                                     </div>
-                                </li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Canoe.jpg" alt="">
+                                    <div class="item" data-frame="1">
+                                        <ul class="thumbnails">
+                                            <li class="span1"></li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-leopard" data-right="#img-mountain" src="images/Leopard.jpg" alt="">
+                                                </div>
+                                            </li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-mountain" data-right="#img-soccer" src="images/Mountain.jpg" alt="">
+                                                </div>
+                                            </li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-soccer" data-right="#img-persia" src="images/Soccer.jpg" alt="">
+                                                </div>
+                                            </li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-persia" data-right="#img-pixar" src="images/Persia.jpg" alt="">
+                                                </div>
+                                            </li>
+                                        </ul>
                                     </div>
-                                </li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Cat.jpg" alt="">
+                                    <div class="item" data-frame="2">
+                                        <ul class="thumbnails">
+                                            <li class="span1"></li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-pixar" data-right="#img-wolf" src="images/Pixar.jpg" alt="">
+                                                </div>
+                                            </li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-wolf" data-right="#img-hotel" src="images/Wolf.jpg" alt="">
+                                                </div>
+                                            </li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-hotel" data-right="#img-man" src="images/Hotel.jpg" alt="">
+                                                </div>
+                                            </li>
+                                            <li class="span2">
+                                                <div class="thumbnail">
+                                                    <img id="img-man" data-right="#img-baby" src="images/Man.jpg" alt="">
+                                                </div>
+                                            </li>
+                                        </ul>
                                     </div>
-                                </li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Highway.jpg" alt="">
-                                    </div>
-                                </li>
-                            </ul>
+                                </div>
+                                <a data-slide="prev" href="#myCarousel" class="left carousel-control">‹</a>
+                                <a data-slide="next" href="#myCarousel" class="right carousel-control">›</a>
+                            </div>
                         </div>
-                        <div class="item">
-                            <ul class="thumbnails">
-                                <li class="span1"></li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Leopard.jpg" alt="">
+                        <div id="alertContainer">Image Browser</div>
+                        <div class="row">
+                            <div class="span7">
+                                <canvas id="myCanvas" width="640" height="480" oncontextmenu="return false;"></canvas>
+                            </div>
+                            <div class="span5" id="gestures">
+                                <div class="row" style="padding-bottom:20px;">
+                                    <div class="span2" style="width:120px;">
+                                        <img id="gesture-left" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/left.jpg" alt="" />
                                     </div>
-                                </li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Mountain.jpg" alt="">
+                                    <div class="span2" style="width:120px;">
+                                        <img id="gesture-right" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/right.jpg" alt="" />
                                     </div>
-                                </li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Soccer.jpg" alt="">
-                                    </div>
-                                </li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Persia.jpg" alt="">
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="item">
-                            <ul class="thumbnails">
-                                <li class="span1"></li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Pixar.jpg" alt="">
-                                    </div>
-                                </li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Wolf.jpg" alt="">
-                                    </div>
-                                </li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Hotel.jpg" alt="">
-                                    </div>
-                                </li>
-                                <li class="span2">
-                                    <div class="thumbnail">
-                                        <img src="images/Man.jpg" alt="">
-                                    </div>
-                                </li>
-                            </ul>
+                                    <div class="span2" style="width:120px;">
+                                        <img id="gesture-sepia" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/sepia.jpg" alt="" />
+                                    </div>                                                                        
+                                </div>
+                                <div class="row">
+                                    <div class="span2" style="width:120px;">
+                                        <img id="gesture-crop" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/crop.jpg" alt="" />
+                                    </div>     
+                                    <div class="span2" style="width:120px;">
+                                        <img id="gesture-undo" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/undo.jpg" alt="" />
+                                    </div>     
+                                    <div class="span2" style="width:120px;">
+                                        <img id="gesture-rotate" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/rotate.jpg" alt="" />
+                                    </div>     
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <a data-slide="prev" href="#myCarousel" class="left carousel-control">‹</a>
-                    <a data-slide="next" href="#myCarousel" class="right carousel-control">›</a>
+                </div>
+                <div class="tab-pane" id="help-pane">
+                    <h1>Help and Documentation</h1>
+                    <h3>Browsing</h3>
+                    <p>Some stuff</p>
+                    <h3>Editing</h3>
+                    <p>Some stuff</p>
+                    <h3>Uploading</h3>
+                    <p>Some stuff</p>
                 </div>
             </div>
         </div>
@@ -323,21 +484,6 @@
             <img alt="" src="images/Soccer.jpg" id="image-soccer" />
             <img alt="" src="images/Hotel.jpg" id="image-hotel" />
             <img alt="" src="images/Wolf.jpg" id="image-wolf" />
-        </div>
-
-        <div class="modal hide fade" id="modal-help">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h3>Help</h3>
-            </div>
-            <div class="modal-body">
-                <h4>Browsing</h4>
-                <p>Some stuff</p>
-                <h4>Editing</h4>
-                <p>Some stuff</p>
-                <h4>Uploading</h4>
-                <p>Some stuff</p>
-            </div>
         </div>
 
     </body>

@@ -12,6 +12,6 @@ canvas{
 }  
 
 #images {
-	visibility: hidden;
+	display: none;
 }
 
