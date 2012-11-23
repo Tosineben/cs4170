@@ -17,6 +17,14 @@ function sepia(imgObj) {
 	replaceCanvas(imgObj.pixastic("revert"));
 }
 
+function nextLeft() {
+
+}
+
+function nextRight() {
+	
+}
+
 function invert2() {
 	var img = new Image();
 	img.onload = function() {
@@ -26,8 +34,8 @@ function invert2() {
 	img.src = "myimage.jpg";
 }
 
-function replaceCanvas(pixasticResult) {
-	_ctx.drawImage(pixasticResult[0], 0, 0);
+function replaceCanvas(jqObj) {
+	_ctx.drawImage(jqObj[0], 0, 0);
 }
 
 function crop() {
