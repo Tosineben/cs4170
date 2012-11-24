@@ -11,10 +11,8 @@
         <link type="text/css" rel="stylesheet" href="styles/bootstrap/bootstrap.min.css" />
         <link type="text/css" rel="stylesheet" href="styles/bootstrap/bootstrap-responsive.min.css" />
         <link type="text/css" rel="stylesheet" href="styles/imagebrowser.css" />
-        <style>
 
-        </style>
-
+        <!-- scripts -->
         <script type="text/javascript" src="scripts/jquery/jquery-1.8.1.min.js"></script>
         <script type="text/javascript" src="scripts/mustache/mustache.js"></script>
         <script type="text/javascript" src="scripts/mustache/jquery-Mustache.js"></script>
@@ -33,452 +31,6 @@
 
             // global starter helpers
             var _isTutorialOpen = true;
-
-            function getCanvasRect(canvas) {
-                var w = canvas.width;
-                var h = canvas.height;
-
-                var cx = canvas.offsetLeft;
-                var cy = canvas.offsetTop;
-                while (canvas.offsetParent != null) {
-                    canvas = canvas.offsetParent;
-                    cx += canvas.offsetLeft;
-                    cy += canvas.offsetTop;
-                }
-                return {x: cx, y: cy, width: w, height: h};
-            }
-
-            function enableDragSelect(enable) {
-                document.onselectstart = function() { return enable; } 
-                document.onmousedown = function() { return enable; }             
-            }        
-
-            function getScrollY() {
-                return typeof(window.pageYOffset) != 'undefined' ? window.pageYOffset : 0;
-            }
-
-            function mouseDownEvent(x, y) {
-                enableDragSelect(false);
-                _isMouseDown = true;
-                x -= _canvasRect.x;
-                y -= _canvasRect.y - getScrollY();
-                if (_points.length > 0) {
-                    //_ctx.clearRect(0, 0, _canvasRect.width, _canvasRect.height);                
-                }
-                _points.length = 1;
-                _points[0] = new Point(x, y);
-                //_ctx.fillRect(x - 4, y - 3, 9, 9);
-            }
-
-            function mouseMoveEvent(x, y) {
-                if (_isMouseDown) {
-                    x -= _canvasRect.x;
-                    y -= _canvasRect.y - getScrollY();
-                    _points[_points.length] = new Point(x, y, 1); // always just 1 stroke
-                    //drawLine(_points[_points.length - 2], _points[_points.length - 1]);
-
-                    // try to handle issue where gesture keeps recording if user goes outside canvas
-                    if (x <= 0 || x >= _canvasRect.width || y <= 0 || y >= _canvasRect.height) {
-                        mouseUpEvent();
-                    }
-
-                }
-            }
-
-            // returns {"No match", 0} if it doesn't match anything
-            function mouseUpEvent(x, y) {
-                enableDragSelect(true);
-                if (_isMouseDown) {
-                    _isMouseDown = false;
-                    if (_currentImg == null) {
-                        displayAlert("Please select an image to enable gesture interactions.");
-                    }
-                    else if (_points.length >= 10) {
-                        var result = _dollar.Recognize(_points);
-                        result = handleOrientation(result);
-                        handleResult(result);
-                    } 
-                    else {
-                        displayAlert("Did you mean to draw a gesture? Please try to draw a complete gesture.");
-                    }
-                }
-            }
-
-            function handleResult(result) {
-                console.debug("Result: " + result.Name + " (" + result.Score + ").");
-                if (result.Name == "No match" || result.Score == 0) {
-                    displayAlert("We didn't understand that gesture, please try again.");
-                    return;
-                }
-                
-                $(".alert").alert('close');
-                $('#gestures').find('img').css('border', '4px solid white');
-                var gesture;
-
-                if (result.Name == "line-left") {
-                    gesture = $('#gesture-left');
-                    moveLeft();
-                    _undoActions.push(moveRight);
-                }
-                else if (result.Name == "line-right") {
-                    gesture = $('#gesture-right').css('border', '4px solid blue');
-                    moveRight();
-                    _undoActions.push(moveLeft);
-                }
-                else if (result.Name == "P") {
-                   gesture = $('#gesture-posterize');
-                    addPosterize();
-                    _undoActions.push(removePosterize); 
-                }
-                else if (result.Name == "S") {
-                    gesture = $('#gesture-sepia');
-                    addSepia();
-                    _undoActions.push(removeSepia);
-                }
-                else if (result.Name == "rotate") {
-                    gesture = $('#gesture-rotate');
-                    rotateRight();
-                    _undoActions.push(rotateLeft);
-                }
-                else if (result.Name == "U") {
-                    gesture = $('#gesture-undo');
-                    var undoAction = _undoActions.pop();
-
-                    // either a set of functions with params, or a parameterless function
-                    if (undoAction != null) {
-                        if (undoAction.length > 0) {
-                            for (var i = 0; i < undoAction.length; i++) {
-                                undoAction[i].action(undoAction[i].args);
-                            }
-                        }
-                        else {
-                            undoAction();                            
-                        }
-                    }
-                    else {
-                        displayAlert("There is nothing to undo.");
-                    }
-                }
-
-                // highlight gesture with blue border, fade out after 1 second
-                gesture.css('border', '4px solid blue');
-                setTimeout(function(){
-                    $({alpha:1}).animate({alpha:0}, {
-                        duration: 500,
-                        step: function(){
-                            gesture.css('border-color','rgba(0,0,255,'+this.alpha+')');
-                        }
-                    });
-                }, 500);
-            }
-
-            function handleOrientation(result) {
-                if (result.Name == "line") {
-                    var leftToRight = _points[_points.length - 1].X - _points[0].X > 0;
-                    if (leftToRight) {
-                        result.Name = "line-left";
-                    }
-                    else { 
-                        result.Name = "line-right";
-                    }
-                }
-                return result;
-            }
-           
-            function moveCarouselToFrame(img) {
-                var frame = img.parents('.item').data('frame');
-                $('#myCarousel').carousel(frame);
-            }
-
-            function getDataToSave(jqObj) {
-                return {
-                    src: jqObj.attr('src'),
-                    right: jqObj.attr('data-right'),
-                    left: jqObj.attr('data-left'),
-                    carousel: jqObj.attr('data-carousel')
-                }
-            }
-
-            function addSavedData(jqObj, data) {
-                jqObj.attr('src', data.src);
-                jqObj.attr('data-right', data.right);
-                jqObj.attr('data-left', data.left);
-                jqObj.attr('data-carousel', data.carousel);
-            }
-
-            function doNewCanvas(src) {
-                var newImg = new Image();
-                newImg.onload = function() {
-                    newImg = applyEffects(newImg, src);
-                    fillCanvas(newImg);
-                };
-                newImg.src = src;
-            }
-
-            function applyEffects(img, src) {
-                // sepia
-                for (var i = 0; i < _sepiaByName[src]; i++) {
-                    img = Pixastic.process(img, "sepia");
-                }
-                // rotate
-                if (_rotationByName[src] && _rotationByName[src] != 0) {
-                    img = Pixastic.process(img, "rotate", {angle:_rotationByName[src]});
-                }
-                // posterize
-                if (_posterizeByName[src] && _posterizeByName[src] < 24) {
-                    img = Pixastic.process(img, "posterize", {levels:_posterizeByName[src]});
-                }
-                return img;
-            }
-
-            function moveLeft() {
-                var left = $('img[data-right="#' + $(_currentImg).attr('id') + '"]');
-                if (left.length == 0) {
-                    left = $('canvas[data-right="#' + $(_currentImg).attr('id') + '"]');
-                }
-                moveCarouselToFrame(left);
-                left.delay(1000).click();
-            }
-
-            function moveRight() {
-                var right = $($(_currentImg).data('right'));
-                moveCarouselToFrame(right);
-                right.delay(1000).click();
-            }
-
-            function addSepia() {
-                var data = getDataToSave($(_currentImg));
-
-                _sepiaByName[data.src] = (_sepiaByName[data.src] || 0) + 1;
-
-                doNewCanvas(data.src);
-
-                _currentImg = Pixastic.process(_currentImg, "sepia");
-                _currentImg.style.display = 'block';
-
-                addSavedData($(_currentImg), data);
-            }
-
-            function removeSepia() {
-                var data = getDataToSave($(_currentImg));
-
-                _sepiaByName[data.src] -= 1;
-
-                doNewCanvas(data.src);
-                var id = $(_currentImg).attr('id');
-                Pixastic.revert(_currentImg);
-                _currentImg = applyEffects($('#' + id)[0], data.src);
-                _currentImg.style.display = 'block';
-
-                addSavedData($(_currentImg), data);
-            }
-
-            function addPosterize() {
-                var data = getDataToSave($(_currentImg));
-
-                _posterizeByName[data.src] = (_posterizeByName[data.src] || 25) - 4;
-
-                doNewCanvas(data.src);
-
-                _currentImg = Pixastic.process(_currentImg, "posterize", {levels:_posterizeByName[data.src]});
-                _currentImg.style.display = 'block';
-
-                addSavedData($(_currentImg), data);
-            }
-
-            function removePosterize() {
-                var data = getDataToSave($(_currentImg));
-
-                _posterizeByName[data.src] += 4;
-
-                doNewCanvas(data.src);
-                var id = $(_currentImg).attr('id');
-                Pixastic.revert(_currentImg);
-                _currentImg = applyEffects($('#' + id)[0], data.src);
-                _currentImg.style.display = 'block';
-
-                addSavedData($(_currentImg), data);
-            }
-
-            function rotateRight() {
-                var data = getDataToSave($(_currentImg));
-
-                _rotationByName[data.src] = (_rotationByName[data.src] || 0) + 90;
-
-                doNewCanvas(data.src);
-
-                _currentImg = Pixastic.process(_currentImg, "rotate", {angle:90});
-                _currentImg.style.display = 'block';
-
-                addSavedData($(_currentImg), data);
-            }
-
-            function rotateLeft() {
-                var data = getDataToSave($(_currentImg));
-
-                _rotationByName[data.src] = _rotationByName[data.src] - 90;
-
-                doNewCanvas(data.src);
-
-                _currentImg = Pixastic.process(_currentImg, "rotate", {angle:-90});
-                _currentImg.style.display = 'block';
-
-                addSavedData($(_currentImg), data);
-            }
-
-            function thumbnailClick(img) {
-                $('.thumbnail').css('border', '1px solid #DDD');
-                $(img).parent().css('border', '1px solid blue');
-
-                if (!_currentImg) {
-                    fillCanvas(img);
-                    $('#gestures-inner').css('opacity', '1');
-                    $('#canvas-inner').css('opacity', '1');
-                }
-                else {
-                    var src = $(img).attr('src');
-                    doNewCanvas(src);
-                }
-
-                _currentImg = img;
-            }
-
-            function fillCanvas(img) {
-                _ctx.drawImage(img, 0, 0, _canvasRect.width, _canvasRect.height);
-            }
-
-// HELPERS TO DELETE
-            function drawImageGesture(ptArray) {
-                for (var i = 0; i < ptArray.length - 1; i++) {
-                    drawLine(ptArray[i], ptArray[i+1]);
-                }
-            }
-            function printPoints() {
-                var a = "";
-                for (var i = 0; i < _points.length; i++) {
-                    var newX = _points[i].X;
-                    var newY = _points[i].Y;
-
-                    if (newX % 1 === 0 && newY % 1 === 0) {
-                        a += "new Point(" + newX + "," + newY + "), ";
-                    }
-                }
-                return a;
-            }
-            function drawLine(pt1, pt2) {
-                _ctx.beginPath();
-                _ctx.moveTo(pt1.X, pt1.Y);
-                _ctx.lineTo(pt2.X, pt2.Y);
-                _ctx.closePath();
-                _ctx.stroke();    
-            }
-// END HELPERS TO DELETE
-
-            function displayAlert(msg, scroll) {
-                if (_currentImg == null && _isTutorialOpen) {
-                    return;
-                }
-                $('#alertInner').mustache('alert', { message: msg, type: 'error' }, { method: 'html' });
-                $('.alert').alert();
-                
-                if (scroll) {
-                    // scroll page so user can see error
-                    var top = $('#alertContainer').position().top - 20;
-                    $("html, body").animate({ scrollTop: top }, "slow");
-                }
-            }
-
-            function addImageGestures() {
-                for (var i = 0; i < _imageGestures.length; i++) {
-                    var gesture = _imageGestures[i];
-                    _dollar.AddGesture(gesture.name, gesture.ptArray);
-                }
-            }
-
-            function setupTutorial() {
-                $('.popover-close').live('click', function() {
-                    $($(this).data('target')).popover('hide');
-                    _isTutorialOpen = false;
-                });
-
-                $('.popover-next').live('click', function() {
-                    var closePopover = $($(this).parents('.popover').find('.popover-close').data('target'));
-                    var showPopover = $($(this).data('target'));
-                    var oldOffset = closePopover.parent().find('.popover').offset().top;
-                    closePopover.popover('hide');
-                    showPopover.popover('show');
-                    var scroll =  oldOffset > showPopover.parent().find('.popover').offset().top ? -100 : 100;
-                    $("html, body").animate({ scrollTop: $(document).scrollTop() + scroll }, "slow");
-                });
-
-                $('.popover-done').live('click', function() {
-                    var close = $(this).parents('.popover').find('.popover-close');
-                    $(close.data('target')).popover('hide');
-                    $("html, body").animate({ scrollTop: 0 }, "slow");
-                    _isTutorialOpen = false;
-                });
-
-                var tmp = [
-                {
-                    title:'Explore Images', 
-                    target:'#explore', 
-                    content:'Browse through your images and select one to start editing.',
-                    placement:'bottom'
-                },
-                {
-                    title:'Use Gestures to Edit', 
-                    target:'#gestures', 
-                    content:'Use these mouse gestures to edit images or continue exploring.',
-                    placement:'left'
-                },
-                {
-                    title:'Draw Gestures on Image',
-                    target:'#canvas-inner', 
-                    content:'Draw gestures here after selecting an image.',
-                    placement:'right'
-                },
-                {
-                    title:'Hide Gestures',
-                    target:'#hide-gestures', 
-                    content:'Once you are familiar with the gestures, you can hide them here.',
-                    placement:'left'
-                },
-                {
-                    title:'Help and Documentation',
-                    target:'#help-link', 
-                    content:'Questions? Click here for help and documentation.',
-                    placement:'bottom'
-                }
-                ];
-
-                var number = 1;
-                for (var i = 0; i < tmp.length; i++) {
-                    var titleData = {number:i+1, title:tmp[i].title, target:tmp[i].target};
-                    var contentData = {content:tmp[i].content};
-                    if (i < tmp.length - 1) {
-                        contentData['nextTarget'] = tmp[i+1].target;
-                        contentData['nextPlacement'] = tmp[i+1].placement;
-                    }
-                    var title = $.Mustache.render('popover-title', titleData);
-                    var content = $.Mustache.render('popover-content', contentData);
-                    $(tmp[i].target).popover({
-                        title:title, content:content, html:true, trigger:'manual', placement:tmp[i].placement
-                    });
-                }
-
-                $(tmp[0].target).popover('show');
-            }
-
-            function initializeCanvas() {
-                var canvas = $('#myCanvas')[0];
-                _ctx = canvas.getContext('2d');
-                _ctx.fillStyle = "rgb(0,0,225)";
-                _ctx.strokeStyle = "rgb(0,0,225)";
-                _ctx.lineWidth = 3;
-                _ctx.font = "16px Gentilis";
-                _canvasRect = getCanvasRect(canvas);
-                return canvas;
-            }
 
             (function () {
             
@@ -580,7 +132,7 @@
 
     <body>
         <div class="container">
-            <div class="pull-right" style="padding-top:20px;padding-right:80px;">
+            <div class="pull-right nav-links">
                 <a id="help-link" onclick="return false;" href="">Help</a>
                 <a class="home-link" onclick="return false;" href="">Back to Home</a>
             </div>
@@ -592,21 +144,49 @@
             </div>
             <div id="help-content">
                 <h3>Help and Documentation</h3>
-                <h4>Browsing</h4>
-                <p>Some stuff</p>
-                <h4>Editing</h4>
-                <p>Some stuff</p>
-                <h4>Uploading</h4>
-                <p>Some stuff</p>
-                <div>
+                <div class="help-content-inner">
+                    <h4>Exploring</h4>
+                    <ul>
+                        <li>Explore all of your images by clicking on the left and right arrows next to each image set.</li>
+                        <li>Select an image by clicking on it, which will show a larger version and enable gestures.</li>
+                    </ul>
+                    <h4>Gestures</h4>
+                    <ul>
+                        <li>Use gestures to edit your selected image or to continue browsing through images.</li>
+                        <li>To draw a gesture, click and hold your mouse down, then move your mouse to trace the gesture, and finally release the mouse click.</li>
+                        <li>Accepted gestures are show to the right of your selected image.</li>
+                        <li>Accepted browsing gestures:</li>
+                        <ul>
+                            <li>Browse Left: </li>
+                            <li>Browse Right: </li>
+                        </ul>
+                        <li>Accepted editing gestures:</li>
+                        <ul>
+                            <li>Rotate: </li>
+                            <li>Sepia Efect: </li>
+                            <li>Poster Effect: </li>
+                        </ul>
+                        <li>Other accepted gestures:</li>
+                        <ul>
+                            <li>Undo: </li>
+                        </ul>
+                    </ul>
+                    <h4>Editing</h4>
+                    <ul>
+                        <li>To edit an image, draw one of the accepted editing gestures directly on your selected image.</li>
+                        <li>If you receive an error message, follow the instructions on the message and try again.</li>
+                        <li>Use the "Undo" gesture to undo any number of edits you've made to an image.</li>
+                    </ul>
+                </div>
+                <div class="help-links">
                     <a class="home-link" onclick="return false;" href="">Back to Home</a>
                 </div>
             </div>
             <div id="main-content">
                 <h3>Explore Images</h3>
-                <div class="row" style="padding-top:20px;">
+                <div class="row explore-row">
                     <div class="span1"></div>
-                    <div class="carousel slide span10" id="myCarousel" style="margin-bottom:0px;">
+                    <div class="carousel slide span10" id="myCarousel">
                         <div class="carousel-inner">
                             <div class="item active" data-frame="0">
                                 <ul class="thumbnails">
@@ -700,49 +280,49 @@
                     <div class="span3 hidden" id="hidden-gesture-buffer"></div>
                     <div class="span6" id="canvas-wrapper">
                         <span id="canvas-inner">
-                            <h3>Edit Image</h3>
+                            <h3>Selected Image</h3>
                             <canvas id="myCanvas" width="540" height="540" oncontextmenu="return false;"></canvas>
                         </span>
                     </div>
                     <div class="span6" id="gestures">
                         <div id="gestures-inner">
                             <h3>Gestures</h3>
-                            <div class="row" style="padding-bottom:20px;">
-                                <div class="span2" style="width:140px;">
+                            <div class="row">
+                                <div class="span2 gesture-wrapper">
                                     <div class="thumbnail">
-                                        <img id="gesture-left" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/left.jpg" alt="" />
+                                        <img id="gesture-left" class="gesture" src="images/gestures/left.jpg" alt="" />
                                         <h5>Browse Left</h5>
                                     </div>
                                 </div>
-                                <div class="span2" style="width:140px;">
+                                <div class="span2 gesture-wrapper">
                                     <div class="thumbnail">
-                                        <img id="gesture-right" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/right.jpg" alt="" />
+                                        <img id="gesture-right" class="gesture" src="images/gestures/right.jpg" alt="" />
                                         <h5>Browse Right</h5>
                                     </div>
                                 </div>
-                                <div class="span2" style="width:140px;">
+                                <div class="span2 gesture-wrapper">
                                     <div class="thumbnail">
-                                        <img id="gesture-rotate" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/rotate.jpg" alt="" />
+                                        <img id="gesture-rotate" class="gesture" src="images/gestures/rotate.jpg" alt="" />
                                         <h5>Rotate</h5>
                                     </div>
                                 </div> 
                             </div>
                             <div class="row"> 
-                                <div class="span2" style="width:140px;">
+                                <div class="span2 gesture-wrapper">
                                     <div class="thumbnail">
-                                        <img id="gesture-sepia" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/sepia.jpg" alt="" />
-                                        <h5>Sepia</h5>
+                                        <img id="gesture-sepia" class="gesture" src="images/gestures/sepia.jpg" alt="" />
+                                        <h5>Sepia Effect</h5>
                                     </div>
                                 </div>     
-                                <div class="span2" style="width:140px;">
+                                <div class="span2 gesture-wrapper">
                                     <div class="thumbnail">
-                                        <img id="gesture-posterize" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/posterize.jpg" alt="" />
-                                        <h5>Posterize</h5>
+                                        <img id="gesture-posterize" class="gesture" src="images/gestures/posterize.jpg" alt="" />
+                                        <h5>Poster Effect</h5>
                                     </div>
                                 </div> 
-                                <div class="span2" style="width:140px;">
+                                <div class="span2 gesture-wrapper">
                                     <div class="thumbnail">
-                                        <img id="gesture-undo" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/undo.jpg" alt="" />
+                                        <img id="gesture-undo" class="gesture" src="images/gestures/undo.jpg" alt="" />
                                         <h5>Undo</h5>
                                     </div>
                                 </div>    
