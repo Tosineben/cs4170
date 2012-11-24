@@ -3,7 +3,7 @@ body {
 	padding: 0px;  
 }  
 
-canvas{  
+#myCanvas{  
 	outline: 0;  
 	border: 1px solid #000;  
 	margin-left: auto;  

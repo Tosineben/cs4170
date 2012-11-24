@@ -27,6 +27,9 @@
         <script type="text/javascript">
 
             var _isMouseDown, _points, _dollar, _ctx, _canvasRect, _undoActions, _currentImg, _rotationByName;
+            var _canvasByName = {};
+            var _canvases;
+            var _sepiaByName = {};
 
             function getCanvasRect(canvas) {
                 var w = canvas.width;
@@ -108,9 +111,19 @@
                     moveRight();
                     _undoActions.push(moveLeft);
                 }
+                else if (result.Name == "D") {
+                    gesture = $('#gesture-delete');
+                    doDelete();
+                    _undoActions.push(doAdd);
+                }
+                else if (result.Name == "A") {
+                    gesture = $('#gesture-add');
+                    doAdd();
+                    _undoActions.push(doDelete);
+                }
                 else if (result.Name == "S") {
                     gesture = $('#gesture-sepia');
-                    applySepia();
+                    addSepia();
                     _undoActions.push(removeSepia);
                 }
                 else if (result.Name == "rotate") {
@@ -121,10 +134,13 @@
                 else if (result.Name == "U") {
                     gesture = $('#gesture-undo');
                     var undoAction = _undoActions.pop();
+
+                    // either a set of functions with params, or a parameterless function
                     if (undoAction != null) {
-                        if (undoAction.action != null) {
-                            undoAction.action(undoAction.args);
-                            thumbnailClick(undoAction.args[0]);
+                        if (undoAction.length > 0) {
+                            for (var i = 0; i < undoAction.length; i++) {
+                                undoAction[i].action(undoAction[i].args);
+                            }
                         }
                         else {
                             undoAction();                            
@@ -171,75 +187,103 @@
                 $('#myCarousel').carousel(frame);
             }
 
-            function doCarouselAction() {
-                
+            function doAdd() {
+
             }
 
-            function applySepia() {
+            function doDelete() {
 
+            }
+
+            function getDataToSave(jqObj) {
+                return {
+                    src: jqObj.attr('src'),
+                    right: jqObj.attr('data-right'),
+                    left: jqObj.attr('data-left'),
+                    carousel: jqObj.attr('data-carousel')
+                }
+            }
+
+            function addSavedData(jqObj, data) {
+                jqObj.attr('src', data.src);
+                jqObj.attr('data-right', data.right);
+                jqObj.attr('data-left', data.left);
+                jqObj.attr('data-carousel', data.carousel);
+            }
+
+            function doNewCanvas(src) {
+                var newImg = new Image();
+                newImg.onload = function() {
+                    newImg = applyEffects(newImg, src);
+                    fillCanvas(newImg);
+                };
+                newImg.src = src;
+            }
+
+            function applyEffects(img, src) {
+                // sepia
+                for (var i = 0; i < _sepiaByName[src]; i++) {
+                    img = Pixastic.process(img, "sepia");
+                }
+                // rotate
+                if (_rotationByName[src] && _rotationByName[src] != 0) {
+                    img = Pixastic.process(img, "rotate", {angle:_rotationByName[src]});
+                }
+                return img;
+            }
+
+            function addSepia() {
+                var data = getDataToSave($(_currentImg));
+
+                _sepiaByName[data.src] = (_sepiaByName[data.src] || 0) + 1
+
+                doNewCanvas(data.src);
+
+                _currentImg = Pixastic.process(_currentImg, "sepia");
+                _currentImg.style.display = 'block';
+
+                addSavedData($(_currentImg), data);
             }
 
             function removeSepia() {
+                var data = getDataToSave($(_currentImg));
 
+                _sepiaByName[data.src] -= 1;
+
+                doNewCanvas(data.src);
+
+                var id = $(_currentImg).attr('id');
+                Pixastic.revert(_currentImg);
+                _currentImg = applyEffects($('#' + id)[0], data.src);
+                _currentImg.style.display = 'block';
+
+                addSavedData($(_currentImg), data);
             }
 
             function rotateRight() {
-                var src = $(_currentImg).attr('src');
-                var right = $(_currentImg).attr('data-right');
-                var left = $(_currentImg).attr('data-left');
-                var carousel = $(_currentImg).attr('data-carousel');
+                var data = getDataToSave($(_currentImg));
 
-                var currentRotation = _rotationByName[src] || 0;
-                var rotation = currentRotation + 90;
-                _rotationByName[src] = rotation;
+                _rotationByName[data.src] = (_rotationByName[data.src] || 0) + 90;
 
-                var newImg = new Image();
-                newImg.onload = function() {
-                    var rotated = Pixastic.process(newImg, "rotate", {angle:rotation});
-                    fillCanvas(rotated);
-                };
-                newImg.src = src;
+                doNewCanvas(data.src);
+
                 _currentImg = Pixastic.process(_currentImg, "rotate", {angle:90});
                 _currentImg.style.display = 'block';
 
-                $(_currentImg).attr('src', src);
-                $(_currentImg).attr('data-right', right);
-                $(_currentImg).attr('data-left', left);
-                $(_currentImg).attr('data-carousel', carousel);
+                addSavedData($(_currentImg), data);
             }
 
             function rotateLeft() {
-                var src = $(_currentImg).attr('src');
-                var currentRotation = _rotationByName[src] || 0;
-                var rotation = currentRotation - 90;
-                _rotationByName[src] = rotation;
+                var data = getDataToSave($(_currentImg));
 
-                var newImg = new Image();
-                newImg.onload = function() {
-                    var rotated = Pixastic.process(newImg, "rotate", {angle:rotation});
-                    fillCanvas(rotated);
-                };
-                newImg.src = src;
+                _rotationByName[data.src] = _rotationByName[data.src] - 90;
+
+                doNewCanvas(data.src);
+
                 _currentImg = Pixastic.process(_currentImg, "rotate", {angle:-90});
                 _currentImg.style.display = 'block';
-                $(_currentImg).attr('src', src);
-                /*
-                if (_currentCanvas) {
-                    _currentCanvas = Pixastic.process(_currentCanvas, "rotate", {angle:-90});
-                    fillCanvas(_currentCanvas);
-                    _currentImg = Pixastic.process(_currentImg, "rotate", {angle:-90});
-                }
-                else {
-                    var newImg = new Image();
-                    newImg.onload = function() {
-                        _currentCanvas = Pixastic.process(newImg, "rotate", {angle:-90});
-                        fillCanvas(_currentCanvas);
-                    };
-                    newImg.src = _currentImg.src;
-                    _currentImg = Pixastic.process(_currentImg, "rotate", {angle:-90});
-                }
-                _currentImg.style.display = 'block';
-                */
+
+                addSavedData($(_currentImg), data);
             }
 
             function handleOrientation(result) {
@@ -254,7 +298,9 @@
                 }
                 return result;
             }
-
+            
+            //$('.tmp').find('.thumbnails').append($('.tmp').find('.thumbnails').children().first()[0]).show('slow')
+            
             function drawConnectedPoint(from, to) {
                 drawLine(_points[from], _points[to]);
             }
@@ -313,6 +359,14 @@
                     $.Mustache.addFromDom();
                     adq.imagebrowser.init({});
 
+                    $('#prev-slide').click(function() {
+                        $('.tmp').find('.thumbnails').children().last().prependTo($('.tmp').find('.thumbnails'));
+                    });
+
+                    $('#next-slide').click(function() {
+                        $('.tmp').find('.thumbnails').children().first().appendTo($('.tmp').find('.thumbnails'));
+                    });
+
                 });
 
                 $(window).load(function() {
@@ -330,9 +384,6 @@
 
                     _isMouseDown = false;
 
-                    _undoActions = new Array();
-                    _rotationByName = {};
-
                     canvas.addEventListener("mousedown", function(evt) {
                         mouseDownEvent(evt.clientX, evt.clientY);
                     }, false);
@@ -346,6 +397,9 @@
                     }, false);
 
                     addImageGestures();
+                    _undoActions = new Array();
+                    _rotationByName = {};
+
 
                     $('#myCarousel').carousel({
                       interval: false
@@ -353,7 +407,8 @@
 
                     $('.thumbnail').live('click', function() {
                         if (_currentImg) {
-                            _undoActions.push({action:moveCarouselToFrame, args:$(_currentImg)});                            
+                            _undoActions.push([{action: moveCarouselToFrame, args: $(_currentImg)}, 
+                                               {action: thumbnailClick, args: _currentImg}]);                            
                         }
                         thumbnailClick(this.children[0]);
                     });
@@ -363,6 +418,12 @@
                         imgs.first().attr('data-carousel', 'prev');
                         imgs.last().attr('data-carousel', 'next');
                     });
+
+                    $('.thumbnail img').each(function(i,e){
+                        _canvasByName[$(e).attr('src')] = new Array();
+                    });
+
+                    _canvases = new Array();
 
                 });
             
@@ -377,19 +438,11 @@
                 }
                 else {
                     var src = $(img).attr('src');
-                    var currentRotation = _rotationByName[src] || 0;
-
-                    var cvsImg = new Image();
-                    cvsImg.onload = function() {
-                        var processed = cvsImg;
-                        if (currentRotation != 0) {
-                            processed = Pixastic.process(processed, "rotate", {angle:currentRotation});
-                        }
-                        fillCanvas(processed);
-                    };
-                    cvsImg.src = src;
+                    doNewCanvas(src);
                 }
 
+                _canvases.push({img:img, thumbnail:$(img).attr('id')});
+                _canvasByName[$(img).attr('src')].push(img);
                 _currentImg = img;
 
                 // scroll page
@@ -519,19 +572,19 @@
                                         <img id="gesture-right" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/right.jpg" alt="" />
                                     </div>
                                     <div class="span2" style="width:120px;">
-                                        <img id="gesture-sepia" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/sepia.jpg" alt="" />
-                                    </div>                                                                        
+                                        <img id="gesture-rotate" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/rotate.jpg" alt="" />
+                                    </div> 
                                 </div>
                                 <div class="row">
                                     <div class="span2" style="width:120px;">
-                                        <img id="gesture-crop" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/crop.jpg" alt="" />
+                                        <img id="gesture-delete" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/delete.jpg" alt="" />
                                     </div>     
                                     <div class="span2" style="width:120px;">
                                         <img id="gesture-undo" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/undo.jpg" alt="" />
                                     </div>     
                                     <div class="span2" style="width:120px;">
-                                        <img id="gesture-rotate" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/rotate.jpg" alt="" />
-                                    </div>     
+                                        <img id="gesture-add" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/add.jpg" alt="" />
+                                    </div> 
                                 </div>
                                 <div class="row">
                                     <input type="button" onclick="handleResult({Name:'rotate',Score:.5})" value="rotate" />
@@ -539,9 +592,55 @@
                                     <input type="button" onclick="handleResult({Name:'U',Score:.5})" value="U" />
                                     <input type="button" onclick="handleResult({Name:'line-left',Score:.5})" value="left" />
                                     <input type="button" onclick="handleResult({Name:'line-right',Score:.5})" value="right" />
-                                    <input type="button" onclick="handleResult({Name:'rotate',Score:.5})" value="crop" />
+                                    <input type="button" onclick="handleResult({Name:'A',Score:.5})" value="add" />
+                                    <input type="button" onclick="handleResult({Name:'D',Score:.5})" value="delete" />
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="row" style="padding-bottom:50px;">
+                            <div class="span1"></div>
+                            <div class="span10">
+                                 <div class="tmp" id="asdf" style="width:800px;overflow:hidden;position:relative;">
+                                    <div>
+                                    <div class="thumbnails" style="width:2500px;padding-left:80px;">
+                                        <div class="span1"></div>
+                                        <div class="span2">
+                                            <div class="thumbnail">
+                                                <img id="img-baby" data-right="#img-canoe" src="images/Baby.jpg" alt="">
+                                            </div>
+                                        </div>
+                                        <div class="span2">
+                                            <div class="thumbnail">
+                                                <img id="img-canoe" data-right="#img-cat" src="images/Canoe.jpg" alt="">
+                                            </div>
+                                        </div>
+                                        <div class="span2" style="-webkit-transition:.6s ease-in-out left;">
+                                            <div class="thumbnail">
+                                                <img id="img-cat" data-right="#img-highway" src="images/Cat.jpg" alt="">
+                                            </div>
+                                        </div>
+                                        <div class="span2">
+                                            <div class="thumbnail">
+                                                <img id="img-highway" data-right="#img-leopard" src="images/Highway.jpg" alt="">
+                                            </div>
+                                        </div>
+                                        <div class="span2">
+                                            <div class="thumbnail">
+                                                <img id="img-leopard" data-right="#img-mountain" src="images/Leopard.jpg" alt="">
+                                            </div>
+                                        </div>
+                                        <div class="span2">
+                                            <div class="thumbnail">
+                                                <img id="img-mountain" data-right="#img-soccer" src="images/Mountain.jpg" alt="">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <a id="prev-slide" href="" class="left carousel-control">‹</a>
+                                    <a id="next-slide" href="" class="right carousel-control">›</a>
+                                </div>
+                                </div>
+                            </div>   
                         </div>
                     </div>
                 </div>
@@ -580,5 +679,13 @@
     <div class="alert alert-error fade in">
         <button type="button" class="close" data-dismiss="alert">×</button>
         <strong>Oops!</strong> {{message}}
+    </div>
+</script>
+
+<script id="newimg" type="text/html">
+    <div class="span2">
+        <div class="thumbnail">
+            <img id="{{id}}" data-right="{{right}}" src="{{src}}" alt="">
+        </div>
     </div>
 </script>

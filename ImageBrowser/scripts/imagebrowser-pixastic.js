@@ -1,43 +1,4 @@
 
-function rotate(imgObj, right) {
-    replaceCanvas(imgObj.pixastic("rotate", {
-        angle: right ? 90 : -90
-    }));
-}
-
-function invert(imgObj) {
-    replaceCanvas(imgObj.pixastic("invert"));
-}
-
-function undo(imgObj) {
-	replaceCanvas(imgObj.pixastic("revert"));
-}
-
-function sepia(imgObj) {
-	replaceCanvas(imgObj.pixastic("revert"));
-}
-
-function nextLeft() {
-
-}
-
-function nextRight() {
-	
-}
-
-function invert2() {
-	var img = new Image();
-	img.onload = function() {
-		Pixastic.process(img, "invert");
-	}
-	document.body.appendChild(img);
-	img.src = "myimage.jpg";
-}
-
-function replaceCanvas(jqObj) {
-	_ctx.drawImage(jqObj[0], 0, 0);
-}
-
 function crop() {
 	var canvas = $("#myCanvas");
 	canvas.Jcrop({
@@ -55,3 +16,12 @@ function crop() {
 	    }
 	});
 }
+
+$('#test').pixastic("crop", {
+    rect: {
+        left: 0,
+        top: 0,
+        width: Math.min($("#test").height(), $("#test").width()),
+        height: Math.min($("#test").height(), $("#test").width())
+    }
+})
