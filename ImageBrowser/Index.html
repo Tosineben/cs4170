@@ -26,7 +26,7 @@
         <script type="text/javascript" src="scripts/imagebrowser.js"></script>
         <script type="text/javascript">
 
-            var _isMouseDown, _points, _dollar, _ctx, _canvasRect, _undoActions, _currentImg, _prevImage;
+            var _isMouseDown, _points, _dollar, _ctx, _canvasRect, _undoActions, _currentImg, _rotationByName;
 
             function getCanvasRect(canvas) {
                 var w = canvas.width;
@@ -53,7 +53,7 @@
                 _points.length = 1;
                 _points[0] = new Point(x, y);
                 drawText("Recording unistroke...");
-                _ctx.fillRect(x - 4, y - 3, 9, 9);
+                //_ctx.fillRect(x - 4, y - 3, 9, 9);
             }
 
             function mouseMoveEvent(x, y) {
@@ -61,7 +61,7 @@
                     x -= _canvasRect.x;
                     y -= _canvasRect.y - getScrollY();
                     _points[_points.length] = new Point(x, y, 1); // always just 1 stroke
-                    drawConnectedPoint(_points.length - 2, _points.length - 1);
+                    //drawConnectedPoint(_points.length - 2, _points.length - 1);
 
                     // try to handle issue where gesture keeps recording if
                     // user goes outside canvas
@@ -139,12 +139,12 @@
                 gesture.css('border', '4px solid blue');
                 setTimeout(function(){
                     $({alpha:1}).animate({alpha:0}, {
-                        duration: 1000,
+                        duration: 500,
                         step: function(){
                             gesture.css('border-color','rgba(0,0,255,'+this.alpha+')');
                         }
                     });
-                }, 1000);
+                }, 500);
             }
 
             function displayAlert(msg) {
@@ -153,6 +153,9 @@
 
             function moveLeft() {
                 var left = $('img[data-right="#' + $(_currentImg).attr('id') + '"]');
+                if (left.length == 0) {
+                    left = $('canvas[data-right="#' + $(_currentImg).attr('id') + '"]');
+                }
                 moveCarouselToFrame(left);
                 left.delay(1000).click();
             }
@@ -181,11 +184,62 @@
             }
 
             function rotateRight() {
+                var src = $(_currentImg).attr('src');
+                var right = $(_currentImg).attr('data-right');
+                var left = $(_currentImg).attr('data-left');
+                var carousel = $(_currentImg).attr('data-carousel');
 
+                var currentRotation = _rotationByName[src] || 0;
+                var rotation = currentRotation + 90;
+                _rotationByName[src] = rotation;
+
+                var newImg = new Image();
+                newImg.onload = function() {
+                    var rotated = Pixastic.process(newImg, "rotate", {angle:rotation});
+                    fillCanvas(rotated);
+                };
+                newImg.src = src;
+                _currentImg = Pixastic.process(_currentImg, "rotate", {angle:90});
+                _currentImg.style.display = 'block';
+
+                $(_currentImg).attr('src', src);
+                $(_currentImg).attr('data-right', right);
+                $(_currentImg).attr('data-left', left);
+                $(_currentImg).attr('data-carousel', carousel);
             }
 
             function rotateLeft() {
+                var src = $(_currentImg).attr('src');
+                var currentRotation = _rotationByName[src] || 0;
+                var rotation = currentRotation - 90;
+                _rotationByName[src] = rotation;
 
+                var newImg = new Image();
+                newImg.onload = function() {
+                    var rotated = Pixastic.process(newImg, "rotate", {angle:rotation});
+                    fillCanvas(rotated);
+                };
+                newImg.src = src;
+                _currentImg = Pixastic.process(_currentImg, "rotate", {angle:-90});
+                _currentImg.style.display = 'block';
+                $(_currentImg).attr('src', src);
+                /*
+                if (_currentCanvas) {
+                    _currentCanvas = Pixastic.process(_currentCanvas, "rotate", {angle:-90});
+                    fillCanvas(_currentCanvas);
+                    _currentImg = Pixastic.process(_currentImg, "rotate", {angle:-90});
+                }
+                else {
+                    var newImg = new Image();
+                    newImg.onload = function() {
+                        _currentCanvas = Pixastic.process(newImg, "rotate", {angle:-90});
+                        fillCanvas(_currentCanvas);
+                    };
+                    newImg.src = _currentImg.src;
+                    _currentImg = Pixastic.process(_currentImg, "rotate", {angle:-90});
+                }
+                _currentImg.style.display = 'block';
+                */
             }
 
             function handleOrientation(result) {
@@ -277,6 +331,7 @@
                     _isMouseDown = false;
 
                     _undoActions = new Array();
+                    _rotationByName = {};
 
                     canvas.addEventListener("mousedown", function(evt) {
                         mouseDownEvent(evt.clientX, evt.clientY);
@@ -296,11 +351,11 @@
                       interval: false
                     });
 
-                    $('.thumbnail img').live('click', function() {
+                    $('.thumbnail').live('click', function() {
                         if (_currentImg) {
                             _undoActions.push({action:moveCarouselToFrame, args:$(_currentImg)});                            
                         }
-                        thumbnailClick(this);
+                        thumbnailClick(this.children[0]);
                     });
 
                     $('#myCarousel .item').each(function(i, e) {
@@ -317,12 +372,33 @@
                 $('.thumbnail').css('border', '1px solid #DDD');
                 $(img).parent().css('border', '1px solid blue');
 
+                if (!_currentImg) {
+                    fillCanvas(img);
+                }
+                else {
+                    var src = $(img).attr('src');
+                    var currentRotation = _rotationByName[src] || 0;
+
+                    var cvsImg = new Image();
+                    cvsImg.onload = function() {
+                        var processed = cvsImg;
+                        if (currentRotation != 0) {
+                            processed = Pixastic.process(processed, "rotate", {angle:currentRotation});
+                        }
+                        fillCanvas(processed);
+                    };
+                    cvsImg.src = src;
+                }
+
                 _currentImg = img;
-                _ctx.drawImage(_currentImg, 0, 0, _canvasRect.width, _canvasRect.height);
 
                 // scroll page
                 //var top = $('#alertContainer').position().top - 20;
                 //$("html, body").animate({ scrollTop: top }, "slow");
+            }
+
+            function fillCanvas(img) {
+                _ctx.drawImage(img, 0, 0, _canvasRect.width, _canvasRect.height);
             }
 
         </script>
@@ -432,7 +508,7 @@
                         <div id="alertContainer">Image Browser</div>
                         <div class="row">
                             <div class="span7">
-                                <canvas id="myCanvas" width="640" height="480" oncontextmenu="return false;"></canvas>
+                                <canvas id="myCanvas" width="540" height="540" oncontextmenu="return false;"></canvas>
                             </div>
                             <div class="span5" id="gestures">
                                 <div class="row" style="padding-bottom:20px;">
@@ -456,6 +532,14 @@
                                     <div class="span2" style="width:120px;">
                                         <img id="gesture-rotate" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/rotate.jpg" alt="" />
                                     </div>     
+                                </div>
+                                <div class="row">
+                                    <input type="button" onclick="handleResult({Name:'rotate',Score:.5})" value="rotate" />
+                                    <input type="button" onclick="handleResult({Name:'S',Score:.5})" value="S" />
+                                    <input type="button" onclick="handleResult({Name:'U',Score:.5})" value="U" />
+                                    <input type="button" onclick="handleResult({Name:'line-left',Score:.5})" value="left" />
+                                    <input type="button" onclick="handleResult({Name:'line-right',Score:.5})" value="right" />
+                                    <input type="button" onclick="handleResult({Name:'rotate',Score:.5})" value="crop" />
                                 </div>
                             </div>
                         </div>
