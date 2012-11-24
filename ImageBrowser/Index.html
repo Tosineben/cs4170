@@ -22,14 +22,14 @@
         <script type="text/javascript" src="scripts/pixastic/pixastic.custom.js"></script>
         <script type="text/javascript" src="scripts/dollar/pdollar.js"></script>
         <script type="text/javascript" src="scripts/imagebrowser-gestures.js"></script>
-        <script type="text/javascript" src="scripts/imagebrowser-pixastic.js"></script>
         <script type="text/javascript" src="scripts/imagebrowser.js"></script>
         <script type="text/javascript">
 
-            var _isMouseDown, _points, _dollar, _ctx, _canvasRect, _undoActions, _currentImg, _rotationByName;
-            var _canvasByName = {};
-            var _canvases;
-            var _sepiaByName = {};
+            // global canvas variables
+            var _isMouseDown, _points, _dollar, _ctx, _canvasRect;
+
+            // global img editing variables
+            var _sepiaByName = {}, _rotationByName = {}, _posterizeByName = {}, _undoActions = new Array(), _currentImg;
 
             function getCanvasRect(canvas) {
                 var w = canvas.width;
@@ -55,8 +55,7 @@
                 }
                 _points.length = 1;
                 _points[0] = new Point(x, y);
-                drawText("Recording unistroke...");
-                //_ctx.fillRect(x - 4, y - 3, 9, 9);
+                _ctx.fillRect(x - 4, y - 3, 9, 9);
             }
 
             function mouseMoveEvent(x, y) {
@@ -64,7 +63,7 @@
                     x -= _canvasRect.x;
                     y -= _canvasRect.y - getScrollY();
                     _points[_points.length] = new Point(x, y, 1); // always just 1 stroke
-                    //drawConnectedPoint(_points.length - 2, _points.length - 1);
+                    drawConnectedPoint(_points.length - 2, _points.length - 1);
 
                     // try to handle issue where gesture keeps recording if
                     // user goes outside canvas
@@ -86,18 +85,19 @@
                         handleResult(result);
                     } 
                     else {
-                        drawText("Too few points made. Please try again.");
+                        displayAlert("You entered too few points to determine a gesture, please try again.");
                     }
                 }
             }
 
             function handleResult(result) {
-                drawText("Result: " + result.Name + " (" + result.Score + ").");
+                console.debug("Result: " + result.Name + " (" + result.Score + ").");
                 if (result.Name == "No match" || result.Score == 0) {
-                    displayAlert("Oops, we didn't understand that gesture, please try again.");
+                    displayAlert("We didn't understand that gesture, please try again.");
                     return;
                 }
-
+                
+                $(".alert").alert('close');
                 $('#gestures').find('img').css('border', '4px solid white');
                 var gesture;
 
@@ -111,6 +111,7 @@
                     moveRight();
                     _undoActions.push(moveLeft);
                 }
+                /*
                 else if (result.Name == "D") {
                     gesture = $('#gesture-delete');
                     doDelete();
@@ -120,6 +121,12 @@
                     gesture = $('#gesture-add');
                     doAdd();
                     _undoActions.push(doDelete);
+                }
+                */
+                else if (result.Name == "P") {
+                   gesture = $('#gesture-posterize');
+                    addPosterize();
+                    _undoActions.push(removePosterize); 
                 }
                 else if (result.Name == "S") {
                     gesture = $('#gesture-sepia');
@@ -147,7 +154,7 @@
                         }
                     }
                     else {
-                        displayAlert("Oops, there is nothing to undo.");
+                        displayAlert("There is nothing to undo.");
                     }
                 }
 
@@ -163,8 +170,15 @@
                 }, 500);
             }
 
-            function displayAlert(msg) {
-
+            function displayAlert(msg, scroll) {
+                $('#alertContainer').mustache('alert', { message: msg, type: 'error' }, { method: 'html' });
+                $('.alert').alert();
+                
+                if (scroll) {
+                    // scroll page so user can see error
+                    var top = $('#alertContainer').position().top - 20;
+                    $("html, body").animate({ scrollTop: top }, "slow");
+                }
             }
 
             function moveLeft() {
@@ -185,14 +199,6 @@
             function moveCarouselToFrame(img) {
                 var frame = img.parents('.item').data('frame');
                 $('#myCarousel').carousel(frame);
-            }
-
-            function doAdd() {
-
-            }
-
-            function doDelete() {
-
             }
 
             function getDataToSave(jqObj) {
@@ -229,13 +235,17 @@
                 if (_rotationByName[src] && _rotationByName[src] != 0) {
                     img = Pixastic.process(img, "rotate", {angle:_rotationByName[src]});
                 }
+                // posterize
+                if (_posterizeByName[src] && _posterizeByName[src] < 24) {
+                    img = Pixastic.process(img, "posterize", {levels:_posterizeByName[src]});
+                }
                 return img;
             }
 
             function addSepia() {
                 var data = getDataToSave($(_currentImg));
 
-                _sepiaByName[data.src] = (_sepiaByName[data.src] || 0) + 1
+                _sepiaByName[data.src] = (_sepiaByName[data.src] || 0) + 1;
 
                 doNewCanvas(data.src);
 
@@ -251,7 +261,33 @@
                 _sepiaByName[data.src] -= 1;
 
                 doNewCanvas(data.src);
+                var id = $(_currentImg).attr('id');
+                Pixastic.revert(_currentImg);
+                _currentImg = applyEffects($('#' + id)[0], data.src);
+                _currentImg.style.display = 'block';
 
+                addSavedData($(_currentImg), data);
+            }
+
+            function addPosterize() {
+                var data = getDataToSave($(_currentImg));
+
+                _posterizeByName[data.src] = (_posterizeByName[data.src] || 25) - 4;
+
+                doNewCanvas(data.src);
+
+                _currentImg = Pixastic.process(_currentImg, "posterize", {levels:_posterizeByName[data.src]});
+                _currentImg.style.display = 'block';
+
+                addSavedData($(_currentImg), data);
+            }
+
+            function removePosterize() {
+                var data = getDataToSave($(_currentImg));
+
+                _posterizeByName[data.src] += 4;
+
+                doNewCanvas(data.src);
                 var id = $(_currentImg).attr('id');
                 Pixastic.revert(_currentImg);
                 _currentImg = applyEffects($('#' + id)[0], data.src);
@@ -322,10 +358,6 @@
                 return typeof(window.pageYOffset) != 'undefined' ? window.pageYOffset : 0;
             }
 
-            function drawText(str) {
-                $('#alertContainer').html(str);
-            }
-
             function drawImageGesture(ptArray) {
                 for (var i = 0; i < ptArray.length - 1; i++) {
                     drawLine(ptArray[i], ptArray[i+1]);
@@ -359,12 +391,20 @@
                     $.Mustache.addFromDom();
                     adq.imagebrowser.init({});
 
-                    $('#prev-slide').click(function() {
-                        $('.tmp').find('.thumbnails').children().last().prependTo($('.tmp').find('.thumbnails'));
+                    $('#hide-gestures').click(function() {
+                        $('#show-gestures').show();
+                        $('#hidden-gesture-buffer').show();
+                        $('#gestures').hide();
+                        $('#canvas-wrapper').addClass('span9');
+                        $('#canvas-wrapper').removeClass('span6');
                     });
 
-                    $('#next-slide').click(function() {
-                        $('.tmp').find('.thumbnails').children().first().appendTo($('.tmp').find('.thumbnails'));
+                    $('#show-gestures').click(function() {
+                        $(this).hide();
+                        $('#hidden-gesture-buffer').hide();
+                        $('#gestures').show();
+                        $('#canvas-wrapper').addClass('span6');
+                        $('#canvas-wrapper').removeClass('span9');
                     });
 
                 });
@@ -398,8 +438,6 @@
 
                     addImageGestures();
                     _undoActions = new Array();
-                    _rotationByName = {};
-
 
                     $('#myCarousel').carousel({
                       interval: false
@@ -418,13 +456,6 @@
                         imgs.first().attr('data-carousel', 'prev');
                         imgs.last().attr('data-carousel', 'next');
                     });
-
-                    $('.thumbnail img').each(function(i,e){
-                        _canvasByName[$(e).attr('src')] = new Array();
-                    });
-
-                    _canvases = new Array();
-
                 });
             
             })();
@@ -441,8 +472,6 @@
                     doNewCanvas(src);
                 }
 
-                _canvases.push({img:img, thumbnail:$(img).attr('id')});
-                _canvasByName[$(img).attr('src')].push(img);
                 _currentImg = img;
 
                 // scroll page
@@ -459,7 +488,7 @@
 
     <body>
         <div class="container">
-            <div class="navbar">
+            <div class="navbar navbar-fixed-top">
                 <div class="navbar-inner">
                     <ul class="nav nav-pills">
                         <a class="brand" href="#home-pane" data-toggle="tab">Image Browser</a>
@@ -468,7 +497,7 @@
                     </ul>
                 </div>
             </div>
-            <div class="tab-content">
+            <div class="tab-content" style="padding:50px 0 50px 0;">
                 <div class="tab-pane" id="home-pane">
                     Home stuff
                 </div>
@@ -558,33 +587,60 @@
                                 <a data-slide="next" href="#myCarousel" class="right carousel-control">›</a>
                             </div>
                         </div>
-                        <div id="alertContainer">Image Browser</div>
+                        <div id="alertContainer"></div>
                         <div class="row">
-                            <div class="span7">
+                            <div class="span3 hidden" id="hidden-gesture-buffer"></div>
+                            <div class="span6" id="canvas-wrapper">
+                                 <div class="pull-right" style="padding-top:20px;">
+                                    <a id="show-gestures" onclick="return false;" href="">« Show Gestures</a>
+                                </div>
+                                <h3>Da Canvas</h3>
                                 <canvas id="myCanvas" width="540" height="540" oncontextmenu="return false;"></canvas>
                             </div>
-                            <div class="span5" id="gestures">
+                            <div class="span6" id = "gestures">
+                                <div class="pull-right" style="padding-top:20px;">
+                                    <a id="hide-gestures" onclick="return false;" href="">» Hide Gestures</a>
+                                </div>
+                                <h3>Gestures</h3>
                                 <div class="row" style="padding-bottom:20px;">
-                                    <div class="span2" style="width:120px;">
-                                        <img id="gesture-left" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/left.jpg" alt="" />
+                                    <div class="span2" style="width:140px;">
+                                        <div class="thumbnail">
+                                            <img id="gesture-left" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/left.jpg" alt="" />
+                                            <h5>Browse Left</h5>
+                                        </div>
                                     </div>
-                                    <div class="span2" style="width:120px;">
-                                        <img id="gesture-right" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/right.jpg" alt="" />
+                                    <div class="span2" style="width:140px;">
+                                        <div class="thumbnail">
+                                            <img id="gesture-right" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/right.jpg" alt="" />
+                                            <h5>Browse Right</h5>
+                                        </div>
                                     </div>
-                                    <div class="span2" style="width:120px;">
-                                        <img id="gesture-rotate" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/rotate.jpg" alt="" />
+                                    <div class="span2" style="width:140px;">
+                                        <div class="thumbnail">
+                                            <img id="gesture-rotate" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/rotate.jpg" alt="" />
+                                            <h5>Rotate</h5>
+                                        </div>
                                     </div> 
                                 </div>
-                                <div class="row">
-                                    <div class="span2" style="width:120px;">
-                                        <img id="gesture-delete" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/delete.jpg" alt="" />
+                                <div class="row"> 
+                                    <div class="span2" style="width:140px;">
+                                        <div class="thumbnail">
+                                            <img id="gesture-sepia" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/sepia.jpg" alt="" />
+                                            <h5>Sepia</h5>
+                                        </div>
                                     </div>     
-                                    <div class="span2" style="width:120px;">
-                                        <img id="gesture-undo" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/undo.jpg" alt="" />
-                                    </div>     
-                                    <div class="span2" style="width:120px;">
-                                        <img id="gesture-add" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/add.jpg" alt="" />
+                                    <div class="span2" style="width:140px;">
+                                        <div class="thumbnail">
+                                            <img id="gesture-posterize" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/posterize.jpg" alt="" />
+                                            <h5>Posterize</h5>
+                                        </div>
                                     </div> 
+                                    <div class="span2" style="width:140px;">
+                                        <div class="thumbnail">
+                                            <img id="gesture-undo" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/undo.jpg" alt="" />
+                                            <h5>Undo</h5>
+                                        </div>
+                                    </div>    
                                 </div>
                                 <div class="row">
                                     <input type="button" onclick="handleResult({Name:'rotate',Score:.5})" value="rotate" />
@@ -592,55 +648,9 @@
                                     <input type="button" onclick="handleResult({Name:'U',Score:.5})" value="U" />
                                     <input type="button" onclick="handleResult({Name:'line-left',Score:.5})" value="left" />
                                     <input type="button" onclick="handleResult({Name:'line-right',Score:.5})" value="right" />
-                                    <input type="button" onclick="handleResult({Name:'A',Score:.5})" value="add" />
-                                    <input type="button" onclick="handleResult({Name:'D',Score:.5})" value="delete" />
+                                    <input type="button" onclick="handleResult({Name:'P',Score:.5})" value="posterize" />
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="row" style="padding-bottom:50px;">
-                            <div class="span1"></div>
-                            <div class="span10">
-                                 <div class="tmp" id="asdf" style="width:800px;overflow:hidden;position:relative;">
-                                    <div>
-                                    <div class="thumbnails" style="width:2500px;padding-left:80px;">
-                                        <div class="span1"></div>
-                                        <div class="span2">
-                                            <div class="thumbnail">
-                                                <img id="img-baby" data-right="#img-canoe" src="images/Baby.jpg" alt="">
-                                            </div>
-                                        </div>
-                                        <div class="span2">
-                                            <div class="thumbnail">
-                                                <img id="img-canoe" data-right="#img-cat" src="images/Canoe.jpg" alt="">
-                                            </div>
-                                        </div>
-                                        <div class="span2" style="-webkit-transition:.6s ease-in-out left;">
-                                            <div class="thumbnail">
-                                                <img id="img-cat" data-right="#img-highway" src="images/Cat.jpg" alt="">
-                                            </div>
-                                        </div>
-                                        <div class="span2">
-                                            <div class="thumbnail">
-                                                <img id="img-highway" data-right="#img-leopard" src="images/Highway.jpg" alt="">
-                                            </div>
-                                        </div>
-                                        <div class="span2">
-                                            <div class="thumbnail">
-                                                <img id="img-leopard" data-right="#img-mountain" src="images/Leopard.jpg" alt="">
-                                            </div>
-                                        </div>
-                                        <div class="span2">
-                                            <div class="thumbnail">
-                                                <img id="img-mountain" data-right="#img-soccer" src="images/Mountain.jpg" alt="">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <a id="prev-slide" href="" class="left carousel-control">‹</a>
-                                    <a id="next-slide" href="" class="right carousel-control">›</a>
-                                </div>
-                                </div>
-                            </div>   
                         </div>
                     </div>
                 </div>
@@ -656,6 +666,7 @@
             </div>
         </div>
 
+<!--
         <div id="images">
             <img alt="" src="images/Baby.jpg" id="image-baby" />
             <img alt="" src="images/Canoe.jpg" id="image-canoe" />
@@ -668,6 +679,7 @@
             <img alt="" src="images/Hotel.jpg" id="image-hotel" />
             <img alt="" src="images/Wolf.jpg" id="image-wolf" />
         </div>
+-->
 
     </body>
 
@@ -676,16 +688,8 @@
 <!-- mustache templates -->
 
 <script id="alert" type="text/html">
-    <div class="alert alert-error fade in">
+    <div class="alert alert-{{type}} fade in">
         <button type="button" class="close" data-dismiss="alert">×</button>
         <strong>Oops!</strong> {{message}}
-    </div>
-</script>
-
-<script id="newimg" type="text/html">
-    <div class="span2">
-        <div class="thumbnail">
-            <img id="{{id}}" data-right="{{right}}" src="{{src}}" alt="">
-        </div>
     </div>
 </script>

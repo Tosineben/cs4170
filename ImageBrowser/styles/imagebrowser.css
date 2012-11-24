@@ -11,7 +11,18 @@ body {
 	background-color: #dddddd;
 }  
 
-#images {
-	display: none;
+.thumbnail h5 {
+	text-align: center;
 }
 
+#alertContainer {
+	height: 43px;
+}
+
+.alert.fade.in {
+	margin-bottom: 5px;
+}
+
+#show-gestures {
+	display: none;
+}
