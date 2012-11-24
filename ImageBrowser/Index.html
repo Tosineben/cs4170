@@ -31,6 +31,9 @@
             // global img editing variables
             var _sepiaByName = {}, _rotationByName = {}, _posterizeByName = {}, _undoActions = new Array(), _currentImg;
 
+            // global starter helpers
+            var _isTutorialOpen = true;
+
             function getCanvasRect(canvas) {
                 var w = canvas.width;
                 var h = canvas.height;
@@ -45,6 +48,15 @@
                 return {x: cx, y: cy, width: w, height: h};
             }
 
+            function enableDragSelect(enable) {
+                document.onselectstart = function() { return enable; } 
+                document.onmousedown = function() { return enable; }             
+            }        
+
+            function getScrollY() {
+                return typeof(window.pageYOffset) != 'undefined' ? window.pageYOffset : 0;
+            }
+
             function mouseDownEvent(x, y) {
                 enableDragSelect(false);
                 _isMouseDown = true;
@@ -55,7 +67,7 @@
                 }
                 _points.length = 1;
                 _points[0] = new Point(x, y);
-                _ctx.fillRect(x - 4, y - 3, 9, 9);
+                //_ctx.fillRect(x - 4, y - 3, 9, 9);
             }
 
             function mouseMoveEvent(x, y) {
@@ -63,10 +75,9 @@
                     x -= _canvasRect.x;
                     y -= _canvasRect.y - getScrollY();
                     _points[_points.length] = new Point(x, y, 1); // always just 1 stroke
-                    drawConnectedPoint(_points.length - 2, _points.length - 1);
+                    //drawLine(_points[_points.length - 2], _points[_points.length - 1]);
 
-                    // try to handle issue where gesture keeps recording if
-                    // user goes outside canvas
+                    // try to handle issue where gesture keeps recording if user goes outside canvas
                     if (x <= 0 || x >= _canvasRect.width || y <= 0 || y >= _canvasRect.height) {
                         mouseUpEvent();
                     }
@@ -79,13 +90,16 @@
                 enableDragSelect(true);
                 if (_isMouseDown) {
                     _isMouseDown = false;
-                    if (_points.length >= 10) {
+                    if (_currentImg == null) {
+                        displayAlert("Please select an image to enable gesture interactions.");
+                    }
+                    else if (_points.length >= 10) {
                         var result = _dollar.Recognize(_points);
                         result = handleOrientation(result);
                         handleResult(result);
                     } 
                     else {
-                        displayAlert("You entered too few points to determine a gesture, please try again.");
+                        displayAlert("Did you mean to draw a gesture? Please try to draw a complete gesture.");
                     }
                 }
             }
@@ -111,18 +125,6 @@
                     moveRight();
                     _undoActions.push(moveLeft);
                 }
-                /*
-                else if (result.Name == "D") {
-                    gesture = $('#gesture-delete');
-                    doDelete();
-                    _undoActions.push(doAdd);
-                }
-                else if (result.Name == "A") {
-                    gesture = $('#gesture-add');
-                    doAdd();
-                    _undoActions.push(doDelete);
-                }
-                */
                 else if (result.Name == "P") {
                    gesture = $('#gesture-posterize');
                     addPosterize();
@@ -170,32 +172,19 @@
                 }, 500);
             }
 
-            function displayAlert(msg, scroll) {
-                $('#alertContainer').mustache('alert', { message: msg, type: 'error' }, { method: 'html' });
-                $('.alert').alert();
-                
-                if (scroll) {
-                    // scroll page so user can see error
-                    var top = $('#alertContainer').position().top - 20;
-                    $("html, body").animate({ scrollTop: top }, "slow");
+            function handleOrientation(result) {
+                if (result.Name == "line") {
+                    var leftToRight = _points[_points.length - 1].X - _points[0].X > 0;
+                    if (leftToRight) {
+                        result.Name = "line-left";
+                    }
+                    else { 
+                        result.Name = "line-right";
+                    }
                 }
+                return result;
             }
-
-            function moveLeft() {
-                var left = $('img[data-right="#' + $(_currentImg).attr('id') + '"]');
-                if (left.length == 0) {
-                    left = $('canvas[data-right="#' + $(_currentImg).attr('id') + '"]');
-                }
-                moveCarouselToFrame(left);
-                left.delay(1000).click();
-            }
-
-            function moveRight() {
-                var right = $($(_currentImg).data('right'));
-                moveCarouselToFrame(right);
-                right.delay(1000).click();
-            }
-
+           
             function moveCarouselToFrame(img) {
                 var frame = img.parents('.item').data('frame');
                 $('#myCarousel').carousel(frame);
@@ -240,6 +229,21 @@
                     img = Pixastic.process(img, "posterize", {levels:_posterizeByName[src]});
                 }
                 return img;
+            }
+
+            function moveLeft() {
+                var left = $('img[data-right="#' + $(_currentImg).attr('id') + '"]');
+                if (left.length == 0) {
+                    left = $('canvas[data-right="#' + $(_currentImg).attr('id') + '"]');
+                }
+                moveCarouselToFrame(left);
+                left.delay(1000).click();
+            }
+
+            function moveRight() {
+                var right = $($(_currentImg).data('right'));
+                moveCarouselToFrame(right);
+                right.delay(1000).click();
             }
 
             function addSepia() {
@@ -322,55 +326,33 @@
                 addSavedData($(_currentImg), data);
             }
 
-            function handleOrientation(result) {
-                if (result.Name == "line") {
-                    var leftToRight = _points[_points.length - 1].X - _points[0].X > 0;
-                    if (leftToRight) {
-                        result.Name = "line-left";
-                    }
-                    else { 
-                        result.Name = "line-right";
-                    }
+            function thumbnailClick(img) {
+                $('.thumbnail').css('border', '1px solid #DDD');
+                $(img).parent().css('border', '1px solid blue');
+
+                if (!_currentImg) {
+                    fillCanvas(img);
+                    $('#gestures-inner').css('opacity', '1');
+                    $('#canvas-inner').css('opacity', '1');
                 }
-                return result;
-            }
-            
-            //$('.tmp').find('.thumbnails').append($('.tmp').find('.thumbnails').children().first()[0]).show('slow')
-            
-            function drawConnectedPoint(from, to) {
-                drawLine(_points[from], _points[to]);
-            }
+                else {
+                    var src = $(img).attr('src');
+                    doNewCanvas(src);
+                }
 
-            function drawLine(pt1, pt2) {
-                _ctx.beginPath();
-                _ctx.moveTo(pt1.X, pt1.Y);
-                _ctx.lineTo(pt2.X, pt2.Y);
-                _ctx.closePath();
-                _ctx.stroke();    
+                _currentImg = img;
             }
 
-            function enableDragSelect(enable) {
-                document.onselectstart = function() { return enable; } 
-                document.onmousedown = function() { return enable; }             
-            }        
-
-            function getScrollY() {
-                return typeof(window.pageYOffset) != 'undefined' ? window.pageYOffset : 0;
+            function fillCanvas(img) {
+                _ctx.drawImage(img, 0, 0, _canvasRect.width, _canvasRect.height);
             }
 
+// HELPERS TO DELETE
             function drawImageGesture(ptArray) {
                 for (var i = 0; i < ptArray.length - 1; i++) {
                     drawLine(ptArray[i], ptArray[i+1]);
                 }
             }
-
-            function addImageGestures() {
-                for (var i = 0; i < _imageGestures.length; i++) {
-                    var gesture = _imageGestures[i];
-                    _dollar.AddGesture(gesture.name, gesture.ptArray);
-                }
-            }
-
             function printPoints() {
                 var a = "";
                 for (var i = 0; i < _points.length; i++) {
@@ -383,28 +365,151 @@
                 }
                 return a;
             }
+            function drawLine(pt1, pt2) {
+                _ctx.beginPath();
+                _ctx.moveTo(pt1.X, pt1.Y);
+                _ctx.lineTo(pt2.X, pt2.Y);
+                _ctx.closePath();
+                _ctx.stroke();    
+            }
+// END HELPERS TO DELETE
+
+            function displayAlert(msg, scroll) {
+                if (_currentImg == null && _isTutorialOpen) {
+                    return;
+                }
+                $('#alertInner').mustache('alert', { message: msg, type: 'error' }, { method: 'html' });
+                $('.alert').alert();
+                
+                if (scroll) {
+                    // scroll page so user can see error
+                    var top = $('#alertContainer').position().top - 20;
+                    $("html, body").animate({ scrollTop: top }, "slow");
+                }
+            }
+
+            function addImageGestures() {
+                for (var i = 0; i < _imageGestures.length; i++) {
+                    var gesture = _imageGestures[i];
+                    _dollar.AddGesture(gesture.name, gesture.ptArray);
+                }
+            }
+
+            function setupTutorial() {
+                $('.popover-close').live('click', function() {
+                    $($(this).data('target')).popover('hide');
+                    _isTutorialOpen = false;
+                });
+
+                $('.popover-next').live('click', function() {
+                    var closePopover = $($(this).parents('.popover').find('.popover-close').data('target'));
+                    var showPopover = $($(this).data('target'));
+                    var oldOffset = closePopover.parent().find('.popover').offset().top;
+                    closePopover.popover('hide');
+                    showPopover.popover('show');
+                    var scroll =  oldOffset > showPopover.parent().find('.popover').offset().top ? -100 : 100;
+                    $("html, body").animate({ scrollTop: $(document).scrollTop() + scroll }, "slow");
+                });
+
+                $('.popover-done').live('click', function() {
+                    var close = $(this).parents('.popover').find('.popover-close');
+                    $(close.data('target')).popover('hide');
+                    $("html, body").animate({ scrollTop: 0 }, "slow");
+                    _isTutorialOpen = false;
+                });
+
+                var tmp = [
+                {
+                    title:'Explore Images', 
+                    target:'#explore', 
+                    content:'Browse through your images and select one to start editing.',
+                    placement:'bottom'
+                },
+                {
+                    title:'Use Gestures to Edit', 
+                    target:'#gestures', 
+                    content:'Use these mouse gestures to edit images or continue exploring.',
+                    placement:'left'
+                },
+                {
+                    title:'Draw Gestures on Image',
+                    target:'#canvas-inner', 
+                    content:'Draw gestures here after selecting an image.',
+                    placement:'right'
+                },
+                {
+                    title:'Hide Gestures',
+                    target:'#hide-gestures', 
+                    content:'Once you are familiar with the gestures, you can hide them here.',
+                    placement:'left'
+                },
+                {
+                    title:'Help and Documentation',
+                    target:'#help-link', 
+                    content:'Questions? Click here for help and documentation.',
+                    placement:'bottom'
+                }
+                ];
+
+                var number = 1;
+                for (var i = 0; i < tmp.length; i++) {
+                    var titleData = {number:i+1, title:tmp[i].title, target:tmp[i].target};
+                    var contentData = {content:tmp[i].content};
+                    if (i < tmp.length - 1) {
+                        contentData['nextTarget'] = tmp[i+1].target;
+                        contentData['nextPlacement'] = tmp[i+1].placement;
+                    }
+                    var title = $.Mustache.render('popover-title', titleData);
+                    var content = $.Mustache.render('popover-content', contentData);
+                    $(tmp[i].target).popover({
+                        title:title, content:content, html:true, trigger:'manual', placement:tmp[i].placement
+                    });
+                }
+
+                $(tmp[0].target).popover('show');
+            }
+
+            function initializeCanvas() {
+                var canvas = $('#myCanvas')[0];
+                _ctx = canvas.getContext('2d');
+                _ctx.fillStyle = "rgb(0,0,225)";
+                _ctx.strokeStyle = "rgb(0,0,225)";
+                _ctx.lineWidth = 3;
+                _ctx.font = "16px Gentilis";
+                _canvasRect = getCanvasRect(canvas);
+                return canvas;
+            }
 
             (function () {
             
                 $(function() {
 
                     $.Mustache.addFromDom();
-                    adq.imagebrowser.init({});
 
                     $('#hide-gestures').click(function() {
                         $('#show-gestures').show();
                         $('#hidden-gesture-buffer').show();
                         $('#gestures').hide();
+                        $(this).hide();
                         $('#canvas-wrapper').addClass('span9');
                         $('#canvas-wrapper').removeClass('span6');
+                        initializeCanvas();
+                        if (_currentImg) {
+                            doNewCanvas(_currentImg.src);                            
+                        }
                     });
 
                     $('#show-gestures').click(function() {
+                        $('#hide-gestures').show();
                         $(this).hide();
                         $('#hidden-gesture-buffer').hide();
                         $('#gestures').show();
                         $('#canvas-wrapper').addClass('span6');
                         $('#canvas-wrapper').removeClass('span9');
+                        initializeCanvas();
+                        if (_currentImg) {
+                            doNewCanvas(_currentImg.src);                            
+                        }
                     });
 
                 });
@@ -413,16 +518,10 @@
                     
                     _points = new Array();
                     _dollar = new PDollarRecognizer();
-
-                    var canvas = $('#myCanvas')[0];
-                    _ctx = canvas.getContext('2d');
-                    _ctx.fillStyle = "rgb(0,0,225)";
-                    _ctx.strokeStyle = "rgb(0,0,225)";
-                    _ctx.lineWidth = 3;
-                    _ctx.font = "16px Gentilis";
-                    _canvasRect = getCanvasRect(canvas);
-
+                    _undoActions = new Array();
                     _isMouseDown = false;
+
+                    var canvas = initializeCanvas();
 
                     canvas.addEventListener("mousedown", function(evt) {
                         mouseDownEvent(evt.clientX, evt.clientY);
@@ -437,17 +536,17 @@
                     }, false);
 
                     addImageGestures();
-                    _undoActions = new Array();
 
                     $('#myCarousel').carousel({
                       interval: false
                     });
 
-                    $('.thumbnail').live('click', function() {
+                    $('#myCarousel .thumbnail').live('click', function() {
                         if (_currentImg) {
                             _undoActions.push([{action: moveCarouselToFrame, args: $(_currentImg)}, 
                                                {action: thumbnailClick, args: _currentImg}]);                            
                         }
+                        $(".alert").alert('close');
                         thumbnailClick(this.children[0]);
                     });
 
@@ -456,231 +555,203 @@
                         imgs.first().attr('data-carousel', 'prev');
                         imgs.last().attr('data-carousel', 'next');
                     });
+
+                    $('#help-link').click(function() {
+                        $(this).hide();
+                        $(".home-link").show();
+                        $('#help-content').slideDown();
+                        $('#main-content').slideUp();
+                    });
+
+                    $('.home-link').click(function() {
+                        $('.home-link').hide();
+                        $("#help-link").show();
+                        $('#main-content').slideDown();
+                        $('#help-content').slideUp();
+                    });
+
+                    setupTutorial();
                 });
             
             })();
-
-            function thumbnailClick(img) {
-                $('.thumbnail').css('border', '1px solid #DDD');
-                $(img).parent().css('border', '1px solid blue');
-
-                if (!_currentImg) {
-                    fillCanvas(img);
-                }
-                else {
-                    var src = $(img).attr('src');
-                    doNewCanvas(src);
-                }
-
-                _currentImg = img;
-
-                // scroll page
-                //var top = $('#alertContainer').position().top - 20;
-                //$("html, body").animate({ scrollTop: top }, "slow");
-            }
-
-            function fillCanvas(img) {
-                _ctx.drawImage(img, 0, 0, _canvasRect.width, _canvasRect.height);
-            }
 
         </script>
     </head>
 
     <body>
         <div class="container">
-            <div class="navbar navbar-fixed-top">
-                <div class="navbar-inner">
-                    <ul class="nav nav-pills">
-                        <a class="brand" href="#home-pane" data-toggle="tab">Image Browser</a>
-                        <li class="active"><a id="explore-tab" href="#explore-pane" data-toggle="tab">Explore</a></li>
-                        <li><a href="#help-pane" data-toggle="tab">Help</a></li>
-                    </ul>
+            <div class="pull-right" style="padding-top:20px;padding-right:80px;">
+                <a id="help-link" onclick="return false;" href="">Help</a>
+                <a class="home-link" onclick="return false;" href="">Back to Home</a>
+            </div>
+            <div class="page-header">
+                <h1>Image Browser
+                    <br />
+                    <small>Explore and edit images with gestures.</small>
+                </h1>
+            </div>
+            <div id="help-content">
+                <h3>Help and Documentation</h3>
+                <h4>Browsing</h4>
+                <p>Some stuff</p>
+                <h4>Editing</h4>
+                <p>Some stuff</p>
+                <h4>Uploading</h4>
+                <p>Some stuff</p>
+                <div>
+                    <a class="home-link" onclick="return false;" href="">Back to Home</a>
                 </div>
             </div>
-            <div class="tab-content" style="padding:50px 0 50px 0;">
-                <div class="tab-pane" id="home-pane">
-                    Home stuff
-                </div>
-                <div class="tab-pane active" id="explore-pane">
-                    <div class="container">
-                        <div class="row" style="padding-top:20px;">
-                            <div class="span1"></div>
-                            <div class="carousel slide span10" id="myCarousel" style="margin-bottom:0px;">
-                                <div class="carousel-inner">
-                                    <div class="item active" data-frame="0">
-                                        <ul class="thumbnails">
-                                            <li class="span1"></li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-baby" data-right="#img-canoe" src="images/Baby.jpg" alt="">
-                                                </div>
-                                            </li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-canoe" data-right="#img-cat" src="images/Canoe.jpg" alt="">
-                                                </div>
-                                            </li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-cat" data-right="#img-highway" src="images/Cat.jpg" alt="">
-                                                </div>
-                                            </li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-highway" data-right="#img-leopard" src="images/Highway.jpg" alt="">
-                                                </div>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div class="item" data-frame="1">
-                                        <ul class="thumbnails">
-                                            <li class="span1"></li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-leopard" data-right="#img-mountain" src="images/Leopard.jpg" alt="">
-                                                </div>
-                                            </li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-mountain" data-right="#img-soccer" src="images/Mountain.jpg" alt="">
-                                                </div>
-                                            </li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-soccer" data-right="#img-persia" src="images/Soccer.jpg" alt="">
-                                                </div>
-                                            </li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-persia" data-right="#img-pixar" src="images/Persia.jpg" alt="">
-                                                </div>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div class="item" data-frame="2">
-                                        <ul class="thumbnails">
-                                            <li class="span1"></li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-pixar" data-right="#img-wolf" src="images/Pixar.jpg" alt="">
-                                                </div>
-                                            </li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-wolf" data-right="#img-hotel" src="images/Wolf.jpg" alt="">
-                                                </div>
-                                            </li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-hotel" data-right="#img-man" src="images/Hotel.jpg" alt="">
-                                                </div>
-                                            </li>
-                                            <li class="span2">
-                                                <div class="thumbnail">
-                                                    <img id="img-man" data-right="#img-baby" src="images/Man.jpg" alt="">
-                                                </div>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                                <a data-slide="prev" href="#myCarousel" class="left carousel-control">‹</a>
-                                <a data-slide="next" href="#myCarousel" class="right carousel-control">›</a>
+            <div id="main-content">
+                <h3>Explore Images</h3>
+                <div class="row" style="padding-top:20px;">
+                    <div class="span1"></div>
+                    <div class="carousel slide span10" id="myCarousel" style="margin-bottom:0px;">
+                        <div class="carousel-inner">
+                            <div class="item active" data-frame="0">
+                                <ul class="thumbnails">
+                                    <li class="span1"></li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-baby" data-right="#img-canoe" src="images/Baby.jpg" alt="">
+                                        </div>
+                                    </li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-canoe" data-right="#img-cat" src="images/Canoe.jpg" alt="">
+                                        </div>
+                                    </li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-cat" data-right="#img-highway" src="images/Cat.jpg" alt="">
+                                        </div>
+                                    </li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-highway" data-right="#img-leopard" src="images/Highway.jpg" alt="">
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="item" data-frame="1">
+                                <ul class="thumbnails">
+                                    <li class="span1"></li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-leopard" data-right="#img-mountain" src="images/Leopard.jpg" alt="">
+                                        </div>
+                                    </li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-mountain" data-right="#img-soccer" src="images/Mountain.jpg" alt="">
+                                        </div>
+                                    </li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-soccer" data-right="#img-persia" src="images/Soccer.jpg" alt="">
+                                        </div>
+                                    </li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-persia" data-right="#img-pixar" src="images/Persia.jpg" alt="">
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="item" data-frame="2">
+                                <ul class="thumbnails">
+                                    <li class="span1"></li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-pixar" data-right="#img-wolf" src="images/Pixar.jpg" alt="">
+                                        </div>
+                                    </li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-wolf" data-right="#img-hotel" src="images/Wolf.jpg" alt="">
+                                        </div>
+                                    </li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-hotel" data-right="#img-man" src="images/Hotel.jpg" alt="">
+                                        </div>
+                                    </li>
+                                    <li class="span2">
+                                        <div class="thumbnail">
+                                            <img id="img-man" data-right="#img-baby" src="images/Man.jpg" alt="">
+                                        </div>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
-                        <div id="alertContainer"></div>
-                        <div class="row">
-                            <div class="span3 hidden" id="hidden-gesture-buffer"></div>
-                            <div class="span6" id="canvas-wrapper">
-                                 <div class="pull-right" style="padding-top:20px;">
-                                    <a id="show-gestures" onclick="return false;" href="">« Show Gestures</a>
+                        <a data-slide="prev" href="#myCarousel" class="left carousel-control">‹</a>
+                        <a data-slide="next" href="#myCarousel" class="right carousel-control">›</a>
+                    </div>
+                </div>
+                <div id="explore" class="span6"></div>
+                <div id="alertContainer">
+                    <div id="alertInner"></div>
+                    <div id="gesture-controls">
+                        <a id="hide-gestures" onclick="return false;" href="">» Hide Gestures</a>
+                        <a id="show-gestures" onclick="return false;" href="">« Show Gestures</a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="span3 hidden" id="hidden-gesture-buffer"></div>
+                    <div class="span6" id="canvas-wrapper">
+                        <span id="canvas-inner">
+                            <h3>Edit Image</h3>
+                            <canvas id="myCanvas" width="540" height="540" oncontextmenu="return false;"></canvas>
+                        </span>
+                    </div>
+                    <div class="span6" id="gestures">
+                        <div id="gestures-inner">
+                            <h3>Gestures</h3>
+                            <div class="row" style="padding-bottom:20px;">
+                                <div class="span2" style="width:140px;">
+                                    <div class="thumbnail">
+                                        <img id="gesture-left" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/left.jpg" alt="" />
+                                        <h5>Browse Left</h5>
+                                    </div>
                                 </div>
-                                <h3>Da Canvas</h3>
-                                <canvas id="myCanvas" width="540" height="540" oncontextmenu="return false;"></canvas>
+                                <div class="span2" style="width:140px;">
+                                    <div class="thumbnail">
+                                        <img id="gesture-right" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/right.jpg" alt="" />
+                                        <h5>Browse Right</h5>
+                                    </div>
+                                </div>
+                                <div class="span2" style="width:140px;">
+                                    <div class="thumbnail">
+                                        <img id="gesture-rotate" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/rotate.jpg" alt="" />
+                                        <h5>Rotate</h5>
+                                    </div>
+                                </div> 
                             </div>
-                            <div class="span6" id = "gestures">
-                                <div class="pull-right" style="padding-top:20px;">
-                                    <a id="hide-gestures" onclick="return false;" href="">» Hide Gestures</a>
-                                </div>
-                                <h3>Gestures</h3>
-                                <div class="row" style="padding-bottom:20px;">
-                                    <div class="span2" style="width:140px;">
-                                        <div class="thumbnail">
-                                            <img id="gesture-left" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/left.jpg" alt="" />
-                                            <h5>Browse Left</h5>
-                                        </div>
+                            <div class="row"> 
+                                <div class="span2" style="width:140px;">
+                                    <div class="thumbnail">
+                                        <img id="gesture-sepia" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/sepia.jpg" alt="" />
+                                        <h5>Sepia</h5>
                                     </div>
-                                    <div class="span2" style="width:140px;">
-                                        <div class="thumbnail">
-                                            <img id="gesture-right" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/right.jpg" alt="" />
-                                            <h5>Browse Right</h5>
-                                        </div>
+                                </div>     
+                                <div class="span2" style="width:140px;">
+                                    <div class="thumbnail">
+                                        <img id="gesture-posterize" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/posterize.jpg" alt="" />
+                                        <h5>Posterize</h5>
                                     </div>
-                                    <div class="span2" style="width:140px;">
-                                        <div class="thumbnail">
-                                            <img id="gesture-rotate" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/rotate.jpg" alt="" />
-                                            <h5>Rotate</h5>
-                                        </div>
-                                    </div> 
-                                </div>
-                                <div class="row"> 
-                                    <div class="span2" style="width:140px;">
-                                        <div class="thumbnail">
-                                            <img id="gesture-sepia" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/sepia.jpg" alt="" />
-                                            <h5>Sepia</h5>
-                                        </div>
-                                    </div>     
-                                    <div class="span2" style="width:140px;">
-                                        <div class="thumbnail">
-                                            <img id="gesture-posterize" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/posterize.jpg" alt="" />
-                                            <h5>Posterize</h5>
-                                        </div>
-                                    </div> 
-                                    <div class="span2" style="width:140px;">
-                                        <div class="thumbnail">
-                                            <img id="gesture-undo" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/undo.jpg" alt="" />
-                                            <h5>Undo</h5>
-                                        </div>
-                                    </div>    
-                                </div>
-                                <div class="row">
-                                    <input type="button" onclick="handleResult({Name:'rotate',Score:.5})" value="rotate" />
-                                    <input type="button" onclick="handleResult({Name:'S',Score:.5})" value="S" />
-                                    <input type="button" onclick="handleResult({Name:'U',Score:.5})" value="U" />
-                                    <input type="button" onclick="handleResult({Name:'line-left',Score:.5})" value="left" />
-                                    <input type="button" onclick="handleResult({Name:'line-right',Score:.5})" value="right" />
-                                    <input type="button" onclick="handleResult({Name:'P',Score:.5})" value="posterize" />
-                                </div>
+                                </div> 
+                                <div class="span2" style="width:140px;">
+                                    <div class="thumbnail">
+                                        <img id="gesture-undo" height="120" width="120" style="margin-right:auto;margin-left:auto;display:block;border-radius:4px;border:4px solid white;" src="images/gestures/undo.jpg" alt="" />
+                                        <h5>Undo</h5>
+                                    </div>
+                                </div>    
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="tab-pane" id="help-pane">
-                    <h1>Help and Documentation</h1>
-                    <h3>Browsing</h3>
-                    <p>Some stuff</p>
-                    <h3>Editing</h3>
-                    <p>Some stuff</p>
-                    <h3>Uploading</h3>
-                    <p>Some stuff</p>
-                </div>
             </div>
         </div>
-
-<!--
-        <div id="images">
-            <img alt="" src="images/Baby.jpg" id="image-baby" />
-            <img alt="" src="images/Canoe.jpg" id="image-canoe" />
-            <img alt="" src="images/Cat.jpg" id="image-cat" />
-            <img alt="" src="images/Highway.jpg" id="image-highway" />
-            <img alt="" src="images/Leopard.jpg" id="image-leopard" />
-            <img alt="" src="images/Mountain.jpg" id="image-mountain" />
-            <img alt="" src="images/Persia.jpg" id="image-persia" />
-            <img alt="" src="images/Soccer.jpg" id="image-soccer" />
-            <img alt="" src="images/Hotel.jpg" id="image-hotel" />
-            <img alt="" src="images/Wolf.jpg" id="image-wolf" />
-        </div>
--->
-
     </body>
 
 </html>
@@ -691,5 +762,22 @@
     <div class="alert alert-{{type}} fade in">
         <button type="button" class="close" data-dismiss="alert">×</button>
         <strong>Oops!</strong> {{message}}
+    </div>
+</script>
+
+<script id="popover-title" type="text/html">
+    <strong>{{number}}. {{title}}</strong>
+    <button type="button" class="close popover-close" data-target="{{target}}">&times;</button>
+</script>
+
+<script id="popover-content" type="text/html">
+    {{content}}
+    <div class="btn-wrapper">
+        {{#nextTarget}}
+        <button type="button" class="btn btn-primary popover-next" data-placement="{{nextPlacement}}" data-target="{{nextTarget}}">Next »</button>
+        {{/nextTarget}}
+        {{^nextTarget}}
+        <button type="button" class="btn btn-primary popover-done">Get Started »</button>
+        {{/nextTarget}}
     </div>
 </script>

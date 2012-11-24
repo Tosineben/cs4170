@@ -15,8 +15,24 @@ body {
 	text-align: center;
 }
 
+.container {
+	padding-bottom: 50px;
+}
+
+.home-link {
+	display: none;
+}
+
+#help-content {
+	display: none;
+}
+
 #alertContainer {
 	height: 43px;
+}
+
+.page-header {
+	padding-left: 350px;
 }
 
 .alert.fade.in {
@@ -25,4 +41,35 @@ body {
 
 #show-gestures {
 	display: none;
+}
+
+.popover .btn-wrapper {
+	text-align: right;
+	padding: 10px 10px 0 0;
+}
+
+#canvas-inner {
+	display: inline-block;
+	opacity: 0.5;
+}
+
+#gestures-inner {
+	opacity: 0.5;
+}
+
+#alertInner {
+	display: inline-block;
+	width: 50%;
+}
+
+#alertContainer {
+	position: relative;
+}
+
+#gesture-controls {
+	padding-top:20px;
+	padding-right:10px;
+	display:inline-block;
+	position:absolute;
+	right:30px;
 }
