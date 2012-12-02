@@ -64,6 +64,66 @@ function mouseUpEvent(x, y) {
     }
 }
 
+function kickoffTutorial() {
+	// get to top of page
+    $("html, body").animate({ scrollTop: 0 }, "slow");
+
+	// close any existing tutorial
+	$('.popover-close').click();
+
+	_isTutorialOpen = true;
+
+    var tutorial = [
+    {
+        title:'Explore Images', 
+        target:'#explore', 
+        content:'Browse through your images and select one to start editing.',
+        placement:'bottom'
+    },
+    {
+        title:'Use Gestures to Edit', 
+        target:'#gestures', 
+        content:'Use these mouse gestures to edit images or continue exploring.',
+        placement:'left'
+    },
+    {
+        title:'Draw Gestures on Image',
+        target:'#canvas-inner', 
+        content:'Draw gestures here after selecting an image.',
+        placement:'right'
+    },
+    {
+        title:'Hide Gestures',
+        target:'#hide-gestures', 
+        content:'Once you are familiar with the gestures, you can hide them here.',
+        placement:'left'
+    },
+    {
+        title:'Help and Documentation',
+        target:'#help-link', 
+        content:'Questions? Click here for help and documentation.',
+        placement:'bottom'
+    }
+    ];
+
+    var number = 1;
+    for (var i = 0; i < tutorial.length; i++) {
+        var titleData = {number:i+1, title:tutorial[i].title, target:tutorial[i].target};
+        var contentData = {content:tutorial[i].content};
+        if (i < tutorial.length - 1) {
+            contentData['nextTarget'] = tutorial[i+1].target;
+            contentData['nextPlacement'] = tutorial[i+1].placement;
+        }
+        var title = $.Mustache.render('popover-title', titleData);
+        var content = $.Mustache.render('popover-content', contentData);
+        $(tutorial[i].target).popover({
+            title:title, content:content, html:true, trigger:'manual', placement:tutorial[i].placement
+        });
+    }
+	
+	$(tutorial[0].target).popover('show');
+}
+
 function handleResult(result) {
     console.debug("Result: " + result.Name + " (" + result.Score + ").");
     if (result.Name == "No match" || result.Score == 0) {
@@ -330,7 +390,7 @@ function addImageGestures() {
 
 function setupTutorial() {
     $('.popover-close').live('click', function() {
-        $($(this).data('target')).popover('hide');
+        $($(this).data('target')).popover('destroy');
         _isTutorialOpen = false;
     });
 
@@ -338,7 +398,7 @@ function setupTutorial() {
         var closePopover = $($(this).parents('.popover').find('.popover-close').data('target'));
         var showPopover = $($(this).data('target'));
         var oldOffset = closePopover.parent().find('.popover').offset().top;
-        closePopover.popover('hide');
+        closePopover.popover('destroy');
         showPopover.popover('show');
         var scroll =  oldOffset > showPopover.parent().find('.popover').offset().top ? -100 : 100;
         $("html, body").animate({ scrollTop: $(document).scrollTop() + scroll }, "slow");
@@ -346,60 +406,12 @@ function setupTutorial() {
 
     $('.popover-done').live('click', function() {
         var close = $(this).parents('.popover').find('.popover-close');
-        $(close.data('target')).popover('hide');
+        $(close.data('target')).popover('destroy');
         $("html, body").animate({ scrollTop: 0 }, "slow");
         _isTutorialOpen = false;
     });
 
-    var tmp = [
-    {
-        title:'Explore Images', 
-        target:'#explore', 
-        content:'Browse through your images and select one to start editing.',
-        placement:'bottom'
-    },
-    {
-        title:'Use Gestures to Edit', 
-        target:'#gestures', 
-        content:'Use these mouse gestures to edit images or continue exploring.',
-        placement:'left'
-    },
-    {
-        title:'Draw Gestures on Image',
-        target:'#canvas-inner', 
-        content:'Draw gestures here after selecting an image.',
-        placement:'right'
-    },
-    {
-        title:'Hide Gestures',
-        target:'#hide-gestures', 
-        content:'Once you are familiar with the gestures, you can hide them here.',
-        placement:'left'
-    },
-    {
-        title:'Help and Documentation',
-        target:'#help-link', 
-        content:'Questions? Click here for help and documentation.',
-        placement:'bottom'
-    }
-    ];
-
-    var number = 1;
-    for (var i = 0; i < tmp.length; i++) {
-        var titleData = {number:i+1, title:tmp[i].title, target:tmp[i].target};
-        var contentData = {content:tmp[i].content};
-        if (i < tmp.length - 1) {
-            contentData['nextTarget'] = tmp[i+1].target;
-            contentData['nextPlacement'] = tmp[i+1].placement;
-        }
-        var title = $.Mustache.render('popover-title', titleData);
-        var content = $.Mustache.render('popover-content', contentData);
-        $(tmp[i].target).popover({
-            title:title, content:content, html:true, trigger:'manual', placement:tmp[i].placement
-        });
-    }
-
-    $(tmp[0].target).popover('show');
+    kickoffTutorial();
 }
 
 function initializeCanvas() {

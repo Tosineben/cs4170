@@ -30,7 +30,7 @@
             var _sepiaByName = {}, _rotationByName = {}, _posterizeByName = {}, _undoActions = new Array(), _currentImg;
 
             // global starter helpers
-            var _isTutorialOpen = true;
+            var _isTutorialOpen;
 
             (function () {
             
@@ -39,6 +39,9 @@
                     $.Mustache.addFromDom();
 
                     $('#hide-gestures').click(function() {
+                        if (_isTutorialOpen) {
+                            $('.popover-close').click();
+                        }
                         $('#show-gestures').show();
                         $('#hidden-gesture-buffer').show();
                         $('#gestures').hide();
@@ -122,6 +125,21 @@
                         $('#help-content').slideUp();
                     });
 
+                    $('#redo-tutorial').click(function() {
+                        $('.home-link').hide();
+                        $("#help-link").show();
+                        $('.alert').alert('close');
+                        $('#help-content').slideUp('fast', function() {
+                            $('#main-content').slideDown('fast', function() {
+                                var showG = $("#show-gestures");
+                                if (showG.is(':visible')) {
+                                    showG.click();
+                                }
+                                kickoffTutorial();
+                            });
+                        });
+                    });
+
                     setupTutorial();
                 });
             
@@ -157,18 +175,18 @@
                         <li>Accepted gestures are show to the right of your selected image.</li>
                         <li>Accepted browsing gestures:</li>
                         <ul>
-                            <li>Browse Left: </li>
-                            <li>Browse Right: </li>
+                            <li>Browse Left: Select the image to the left of the currently selected image.</li>
+                            <li>Browse Right: Select the image to the right of the currently selected image.</li>
                         </ul>
                         <li>Accepted editing gestures:</li>
                         <ul>
-                            <li>Rotate: </li>
-                            <li>Sepia Efect: </li>
-                            <li>Poster Effect: </li>
+                            <li>Rotate: Rotate the selected image by 90 degrees.</li>
+                            <li>Sepia Effect: Apply a sepia effect to the selected image.</li>
+                            <li>Poster Effect: Apply a poster effect to the selected image, which will make the image look more like a commercially  produced poster.</li>
                         </ul>
                         <li>Other accepted gestures:</li>
                         <ul>
-                            <li>Undo: </li>
+                            <li>Undo: Undo the last action, whether that be browsing or editing. This can be repeated.</li>
                         </ul>
                     </ul>
                     <h4>Editing</h4>
@@ -177,6 +195,9 @@
                         <li>If you receive an error message, follow the instructions on the message and try again.</li>
                         <li>Use the "Undo" gesture to undo any number of edits you've made to an image.</li>
                     </ul>
+                </div>
+                <div class="help-links">
+                    <button class="btn btn-primary" id="redo-tutorial" onclick="return false;" href="">Redo Tutorial</a>
                 </div>
                 <div class="help-links">
                     <a class="home-link" onclick="return false;" href="">Back to Home</a>
